@@ -61,6 +61,10 @@ service cloud.firestore {
     match /tournaments/{tournamentId} {
       allow read, write: if request.auth != null;
     }
+    // 允許讀寫 users 集合（帳號管理同步）
+    match /users/{userId} {
+      allow read, write: if true;
+    }
   }
 }
 ```
@@ -72,6 +76,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /tournaments/{tournamentId} {
+      allow read, write: if true;
+    }
+    match /users/{userId} {
       allow read, write: if true;
     }
   }
@@ -92,7 +99,9 @@ npm run build
 - 保存新賽事時同步到雲端
 - 更新賽事時同步到雲端
 - 刪除賽事時從雲端刪除
-- 當其他設備更新數據時，自動刷新本地數據
+- **創建新帳號時同步到雲端，所有裝置自動更新**
+- **刪除帳號時從雲端刪除，所有裝置自動更新**
+- 當其他設備更新數據時，自動刷新本地數據（包括帳號管理）
 
 ### 離線支持
 

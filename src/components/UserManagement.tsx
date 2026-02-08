@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAllUsers, addUser, deleteUser, User, isProtectedUser } from '../utils/userManagement';
+import { getAllUsersAsync, addUserAsync, deleteUserAsync, User, isProtectedUser, setupUsersRealtimeSync } from '../utils/userManagement';
 import { logAction } from '../../utils/auditLog';
 import { getCurrentUsername } from '../utils/auth';
 
@@ -15,18 +15,40 @@ export default function UserManagement({ onBack }: UserManagementProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadUsers();
     setCurrentUser(getCurrentUsername());
+    loadUsers();
+
+    // 設置實時同步：當其他裝置創建或刪除帳號時，自動更新
+    const unsubscribe = setupUsersRealtimeSync((updatedUsers) => {
+      setUsers(updatedUsers);
+      setLoading(false);
+    });
+
+    // 清理函數：組件卸載時取消訂閱
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
-  const loadUsers = () => {
-    const allUsers = getAllUsers();
-    setUsers(allUsers);
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      const allUsers = await getAllUsersAsync();
+      setUsers(allUsers);
+    } catch (error) {
+      console.error('載入用戶失敗:', error);
+      setError('載入用戶失敗，請重新整理頁面');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     setError('');
     setSuccess('');
 
@@ -40,35 +62,51 @@ export default function UserManagement({ onBack }: UserManagementProps) {
       return;
     }
 
-    const result = addUser(newUsername, newPassword, isAdmin);
-    
-    if (result.success) {
-      setSuccess(result.message);
-      setNewUsername('');
-      setNewPassword('');
-      setIsAdmin(false);
-      loadUsers();
-      // 記錄操作日誌
-      logAction('create', newUsername, currentUser || '系统');
-    } else {
-      setError(result.message);
+    try {
+      setLoading(true);
+      const result = await addUserAsync(newUsername, newPassword, isAdmin);
+      
+      if (result.success) {
+        setSuccess(result.message);
+        setNewUsername('');
+        setNewPassword('');
+        setIsAdmin(false);
+        // 不需要手動重新載入，實時同步會自動更新
+        // 記錄操作日誌
+        logAction('create', newUsername, currentUser || '系统');
+      } else {
+        setError(result.message);
+      }
+    } catch (error) {
+      console.error('添加用戶失敗:', error);
+      setError('添加用戶失敗，請稍後再試');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDeleteUser = (username: string) => {
+  const handleDeleteUser = async (username: string) => {
     if (!confirm(`確定要刪除用戶「${username}」嗎？`)) {
       return;
     }
 
-    const result = deleteUser(username);
-    
-    if (result.success) {
-      setSuccess(result.message);
-      loadUsers();
-      // 記錄操作日誌
-      logAction('delete', username, currentUser || '系统');
-    } else {
-      setError(result.message);
+    try {
+      setLoading(true);
+      const result = await deleteUserAsync(username);
+      
+      if (result.success) {
+        setSuccess(result.message);
+        // 不需要手動重新載入，實時同步會自動更新
+        // 記錄操作日誌
+        logAction('delete', username, currentUser || '系统');
+      } else {
+        setError(result.message);
+      }
+    } catch (error) {
+      console.error('刪除用戶失敗:', error);
+      setError('刪除用戶失敗，請稍後再試');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -156,9 +194,10 @@ export default function UserManagement({ onBack }: UserManagementProps) {
             <div className="flex items-end">
               <button
                 onClick={handleAddUser}
-                className="w-full px-4 py-2 bg-white hover:bg-gray-100 rounded-lg text-base font-semibold text-black transition-all duration-200 border-2 border-white shadow-lg"
+                disabled={loading}
+                className="w-full px-4 py-2 bg-white hover:bg-gray-100 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg text-base font-semibold text-black transition-all duration-200 border-2 border-white shadow-lg"
               >
-                ➕ 新增用戶
+                {loading ? '處理中...' : '➕ 新增用戶'}
               </button>
             </div>
           </div>
@@ -180,10 +219,17 @@ export default function UserManagement({ onBack }: UserManagementProps) {
         <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-2xl p-4 md:p-6 border-2 border-poker-gold-600 border-opacity-40 shadow-xl shadow-poker-gold-500/20">
           <h2 className="text-xl md:text-2xl font-display font-bold text-poker-gold-400 mb-4">
             用戶列表
+            {loading && <span className="ml-2 text-sm text-gray-400">(同步中...)</span>}
           </h2>
           
-          {/* 手機版：卡片式佈局 */}
-          <div className="md:hidden space-y-3">
+          {loading && users.length === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              載入中...
+            </div>
+          ) : (
+            <>
+              {/* 手機版：卡片式佈局 */}
+              <div className="md:hidden space-y-3">
             {users.map((user) => (
               <div
                 key={user.username}
@@ -260,6 +306,8 @@ export default function UserManagement({ onBack }: UserManagementProps) {
               </tbody>
             </table>
           </div>
+            </>
+          )}
         </div>
       </div>
     </div>
