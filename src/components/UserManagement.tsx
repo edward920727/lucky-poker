@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAllUsers, addUser, deleteUser, User } from '../utils/userManagement';
+import { getAllUsers, addUser, deleteUser, User, isProtectedUser } from '../utils/userManagement';
 import { logAction } from '../../utils/auditLog';
 import { getCurrentUsername } from '../utils/auth';
 
@@ -201,13 +201,16 @@ export default function UserManagement({ onBack }: UserManagementProps) {
                     </div>
                     <div className="text-sm text-gray-400">密碼: ••••••••</div>
                   </div>
-                  {user.username !== 'gi' && (
+                  {!isProtectedUser(user.username) && (
                     <button
                       onClick={() => handleDeleteUser(user.username)}
                       className="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold text-white transition-all duration-200"
                     >
                       🗑️ 刪除
                     </button>
+                  )}
+                  {isProtectedUser(user.username) && (
+                    <span className="text-xs text-gray-500">受保護帳號</span>
                   )}
                 </div>
               </div>
@@ -241,7 +244,7 @@ export default function UserManagement({ onBack }: UserManagementProps) {
                       )}
                     </td>
                     <td className="py-4 px-4">
-                      {user.username !== 'gi' ? (
+                      {!isProtectedUser(user.username) ? (
                         <button
                           onClick={() => handleDeleteUser(user.username)}
                           className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold text-white transition-all duration-200"
@@ -249,7 +252,7 @@ export default function UserManagement({ onBack }: UserManagementProps) {
                           🗑️ 刪除
                         </button>
                       ) : (
-                        <span className="text-gray-500 text-sm">預設管理員（不可刪除）</span>
+                        <span className="text-gray-500 text-sm">受保護帳號（不可刪除）</span>
                       )}
                     </td>
                   </tr>

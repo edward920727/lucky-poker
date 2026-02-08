@@ -5,6 +5,7 @@
 const STORAGE_KEY = 'lucky_poker_users';
 const DEFAULT_ADMIN_USERNAME = 'gi';
 const DEFAULT_ADMIN_PASSWORD = 'poker888';
+const PROTECTED_USERNAMES = ['gi', 'edward']; // 受保護的帳號（不可刪除）
 
 export interface User {
   username: string;
@@ -116,9 +117,9 @@ export function addUser(username: string, password: string, isAdmin: boolean = f
  * 刪除用戶
  */
 export function deleteUser(username: string): { success: boolean; message: string } {
-  // 不允許刪除默認管理員
-  if (username === DEFAULT_ADMIN_USERNAME) {
-    return { success: false, message: '不能刪除默認管理員帳號' };
+  // 不允許刪除受保護的帳號
+  if (PROTECTED_USERNAMES.includes(username)) {
+    return { success: false, message: '不能刪除此帳號（受保護帳號）' };
   }
 
   const users = getAllUsers();
@@ -130,6 +131,13 @@ export function deleteUser(username: string): { success: boolean; message: strin
 
   saveUsers(filteredUsers);
   return { success: true, message: '用戶刪除成功' };
+}
+
+/**
+ * 檢查帳號是否為受保護帳號
+ */
+export function isProtectedUser(username: string): boolean {
+  return PROTECTED_USERNAMES.includes(username);
 }
 
 /**
