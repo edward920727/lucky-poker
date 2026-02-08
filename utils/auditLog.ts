@@ -1,4 +1,5 @@
 import { AuditLog, LogAction } from '../types/auditLog';
+import { getCurrentUsername } from '../src/utils/auth';
 
 const STORAGE_KEY = 'lucky_poker_audit_logs';
 const MAX_LOGS = 1000; // 最多保存1000条日志
@@ -23,20 +24,23 @@ export function getAllLogs(): AuditLog[] {
 export function logAction(
   action: LogAction,
   memberId: string,
-  operator: string = '系统',
+  operator?: string,
   field?: string,
   oldValue?: any,
   newValue?: any
 ): void {
   try {
+    // 如果沒有指定操作者，使用當前登入的用戶名
+    const currentOperator = operator || getCurrentUsername() || '系统';
+    
     const logs = getAllLogs();
-    const description = generateDescription(action, memberId, field, oldValue, newValue);
+    const description = generateDescription(action, memberId, field, oldValue, newValue, currentOperator);
     
     const log: AuditLog = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       timestamp: new Date().toISOString(),
       action,
-      operator,
+      operator: currentOperator,
       memberId,
       field,
       oldValue,
@@ -65,28 +69,30 @@ function generateDescription(
   memberId: string,
   field?: string,
   oldValue?: any,
-  newValue?: any
+  newValue?: any,
+  operator?: string
 ): string {
+  const operatorText = operator ? `管理員 ${operator}` : '';
   switch (action) {
     case 'create':
-      return `新增玩家 會編${memberId}`;
+      return `${operatorText} 新增玩家 會編${memberId}`;
     case 'update':
       if (field === 'currentChips') {
-        return `修改 會編${memberId} 的碼量: ${oldValue?.toLocaleString()} -> ${newValue?.toLocaleString()}`;
+        return `${operatorText} 修改 會編${memberId} 的碼量: ${oldValue?.toLocaleString()} -> ${newValue?.toLocaleString()}`;
       } else if (field === 'buyInCount') {
-        return `修改 會編${memberId} 的買入次數: ${oldValue} -> ${newValue}`;
+        return `${operatorText} 修改 會編${memberId} 的買入次數: ${oldValue} -> ${newValue}`;
       } else if (field === 'paymentMethod') {
-        return `修改 會編${memberId} 的支付方式: ${oldValue} -> ${newValue}`;
+        return `${operatorText} 修改 會編${memberId} 的支付方式: ${oldValue} -> ${newValue}`;
       }
-      return `修改 會編${memberId} 的 ${field}`;
+      return `${operatorText} 修改 會編${memberId} 的 ${field}`;
     case 'delete':
-      return `刪除玩家 會編${memberId}`;
+      return `${operatorText} 刪除玩家 會編${memberId}`;
     case 'buyin':
-      return `會編${memberId} 增加買入`;
+      return `${operatorText} 會編${memberId} 增加買入`;
     case 'chip_change':
-      return `會編${memberId} 碼量變更: ${oldValue?.toLocaleString()} -> ${newValue?.toLocaleString()}`;
+      return `${operatorText} 會編${memberId} 碼量變更: ${oldValue?.toLocaleString()} -> ${newValue?.toLocaleString()}`;
     default:
-      return `操作 會編${memberId}`;
+      return `${operatorText} 操作 會編${memberId}`;
   }
 }
 

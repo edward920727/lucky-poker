@@ -7,6 +7,7 @@ interface IndexPageProps {
   onCreateNew: () => void;
   onViewTournament: (id: string) => void;
   onLogout?: () => void;
+  onOpenUserManagement?: () => void;
 }
 
 interface GroupedTournaments {
@@ -18,7 +19,7 @@ interface GroupedTournaments {
   totalDeduction: number; // 该日期总提拨金额（如果有记录）
 }
 
-export default function IndexPage({ onCreateNew, onViewTournament, onLogout }: IndexPageProps) {
+export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onOpenUserManagement }: IndexPageProps) {
   const [tournaments, setTournaments] = useState<TournamentRecord[]>([]);
   const [showAuditLog, setShowAuditLog] = useState(false);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
@@ -148,16 +149,28 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout }: I
       </div>
 
       <div className="max-w-7xl mx-auto p-6 relative z-10">
-        {/* 登出按鈕 - 右上角 */}
-        {onLogout && (
-          <div className="flex justify-end mb-4">
-            <button
-              onClick={onLogout}
-              className="px-4 md:px-6 py-2 md:py-3 bg-white hover:bg-gray-100 rounded-xl text-sm md:text-base font-semibold text-black transition-all duration-200 border-2 border-white shadow-lg flex items-center gap-2"
-            >
-              <span>🚪</span>
-              <span>登出</span>
-            </button>
+        {/* 登出和帳號管理按鈕 - 右上角 */}
+        {(onLogout || onOpenUserManagement) && (
+          <div className="flex justify-end mb-4 gap-3">
+            {onOpenUserManagement && (
+              <button
+                onClick={onOpenUserManagement}
+                className="px-4 md:px-6 py-2 md:py-3 bg-poker-gold-600 hover:bg-poker-gold-700 text-white rounded-xl text-sm md:text-base font-semibold transition-all duration-200 border-2 border-poker-gold-500 shadow-lg flex items-center gap-2"
+              >
+                <span>👥</span>
+                <span className="hidden sm:inline">帳號管理</span>
+                <span className="sm:hidden">管理</span>
+              </button>
+            )}
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="px-4 md:px-6 py-2 md:py-3 bg-white hover:bg-gray-100 rounded-xl text-sm md:text-base font-semibold text-black transition-all duration-200 border-2 border-white shadow-lg flex items-center gap-2"
+              >
+                <span>🚪</span>
+                <span>登出</span>
+              </button>
+            )}
           </div>
         )}
 

@@ -3,11 +3,13 @@ import IndexPage from './components/IndexPage';
 import TournamentSelector from './components/TournamentSelector';
 import TournamentDashboard from './components/TournamentDashboard';
 import TournamentView from './components/TournamentView';
+import UserManagement from './components/UserManagement';
 import Login from './components/Login';
 import { TournamentType, Player } from '../constants/pokerConfig';
-import { isAuthenticated, logout } from './utils/auth';
+import { isAuthenticated, logout, getCurrentUsername } from './utils/auth';
+import { isAdmin } from './utils/userManagement';
 
-type AppView = 'index' | 'selector' | 'dashboard' | 'view';
+type AppView = 'index' | 'selector' | 'dashboard' | 'view' | 'userManagement';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -78,6 +80,14 @@ function App() {
     setCurrentView('view');
   };
 
+  const handleOpenUserManagement = () => {
+    setCurrentView('userManagement');
+  };
+
+  const handleBackFromUserManagement = () => {
+    setCurrentView('index');
+  };
+
   // 如果正在檢查登入狀態，顯示載入畫面
   if (isCheckingAuth) {
     return (
@@ -97,13 +107,30 @@ function App() {
 
   // 已登入，顯示應用程式內容
   if (currentView === 'index') {
+    const currentUsername = getCurrentUsername();
+    const userIsAdmin = currentUsername ? isAdmin(currentUsername) : false;
+    
     return (
       <IndexPage
         onCreateNew={handleCreateNew}
         onViewTournament={handleViewTournament}
         onLogout={handleLogout}
+        onOpenUserManagement={userIsAdmin ? handleOpenUserManagement : undefined}
       />
     );
+  }
+
+  if (currentView === 'userManagement') {
+    const currentUsername = getCurrentUsername();
+    const userIsAdmin = currentUsername ? isAdmin(currentUsername) : false;
+    
+    // 如果不是管理員，強制返回首頁
+    if (!userIsAdmin) {
+      setCurrentView('index');
+      return null;
+    }
+    
+    return <UserManagement onBack={handleBackFromUserManagement} />;
   }
 
   if (currentView === 'selector') {

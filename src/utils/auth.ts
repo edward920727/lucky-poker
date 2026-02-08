@@ -2,9 +2,9 @@
  * 登入驗證工具
  */
 
+import { validateUserCredentials } from './userManagement';
+
 const STORAGE_KEY = 'lucky_poker_auth';
-const DEFAULT_USERNAME = 'gi';
-const DEFAULT_PASSWORD = 'poker888';
 
 export interface AuthState {
   isAuthenticated: boolean;
@@ -16,7 +16,7 @@ export interface AuthState {
  * 驗證登入憑證
  */
 export function validateCredentials(username: string, password: string): boolean {
-  return username === DEFAULT_USERNAME && password === DEFAULT_PASSWORD;
+  return validateUserCredentials(username, password);
 }
 
 /**
