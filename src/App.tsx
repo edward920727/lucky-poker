@@ -4,12 +4,13 @@ import TournamentSelector from './components/TournamentSelector';
 import TournamentDashboard from './components/TournamentDashboard';
 import TournamentView from './components/TournamentView';
 import UserManagement from './components/UserManagement';
+import AllTournamentsView from './components/AllTournamentsView';
 import Login from './components/Login';
 import { TournamentType, Player } from '../constants/pokerConfig';
 import { isAuthenticated, logout, getCurrentUsername } from './utils/auth';
 import { isAdmin } from './utils/userManagement';
 
-type AppView = 'index' | 'selector' | 'dashboard' | 'view' | 'userManagement';
+type AppView = 'index' | 'selector' | 'dashboard' | 'view' | 'userManagement' | 'allTournaments';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -88,6 +89,14 @@ function App() {
     setCurrentView('index');
   };
 
+  const handleViewAllTournaments = () => {
+    setCurrentView('allTournaments');
+  };
+
+  const handleBackFromAllTournaments = () => {
+    setCurrentView('index');
+  };
+
   // 如果正在檢查登入狀態，顯示載入畫面
   if (isCheckingAuth) {
     return (
@@ -116,6 +125,16 @@ function App() {
         onViewTournament={handleViewTournament}
         onLogout={handleLogout}
         onOpenUserManagement={userIsAdmin ? handleOpenUserManagement : undefined}
+        onViewAllTournaments={handleViewAllTournaments}
+      />
+    );
+  }
+
+  if (currentView === 'allTournaments') {
+    return (
+      <AllTournamentsView
+        onBack={handleBackFromAllTournaments}
+        onViewTournament={handleViewTournament}
       />
     );
   }

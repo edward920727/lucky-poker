@@ -1,15 +1,10 @@
 import { useEffect, useState, useMemo } from 'react';
 import { TournamentRecord } from '../../types/tournament';
 import { getAllTournaments, deleteTournament, setupRealtimeSyncForTournaments } from '../../utils/storage';
-import AuditLogPanel from './AuditLogPanel';
-import MemberPaymentQuery from './MemberPaymentQuery';
 
-interface IndexPageProps {
-  onCreateNew: () => void;
+interface AllTournamentsViewProps {
+  onBack: () => void;
   onViewTournament: (id: string) => void;
-  onLogout?: () => void;
-  onOpenUserManagement?: () => void;
-  onViewAllTournaments?: () => void;
 }
 
 interface GroupedTournaments {
@@ -21,11 +16,11 @@ interface GroupedTournaments {
   totalDeduction: number; // 该日期总提拨金额（如果有记录）
 }
 
-export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onOpenUserManagement, onViewAllTournaments }: IndexPageProps) {
+export default function AllTournamentsView({ onBack, onViewTournament }: AllTournamentsViewProps) {
   const [tournaments, setTournaments] = useState<TournamentRecord[]>([]);
-  const [showAuditLog, setShowAuditLog] = useState(false);
-  const [showMemberQuery, setShowMemberQuery] = useState(false);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
+  const [filterDate, setFilterDate] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   useEffect(() => {
     loadTournaments();
@@ -59,7 +54,6 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
     return dateString.split('T')[0]; // 获取 YYYY-MM-DD 部分
   };
 
-
   const formatDateFull = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('zh-TW', {
@@ -74,22 +68,12 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
     return `NT$ ${amount.toLocaleString()}`;
   };
 
-  // 獲取今天的日期字符串 (YYYY-MM-DD)
-  const getTodayDateKey = () => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  };
-
-  // 按日期分组并计算统计（只顯示今天的）
+  // 按日期分组并计算统计
   const groupedTournaments = useMemo(() => {
     const grouped: Record<string, GroupedTournaments> = {};
-    const todayKey = getTodayDateKey();
 
     tournaments.forEach((tournament) => {
       const dateKey = getDateKey(tournament.date);
-      
-      // 只處理今天的賽事
-      if (dateKey !== todayKey) return;
       
       if (!grouped[dateKey]) {
         grouped[dateKey] = {
@@ -103,10 +87,8 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
       }
 
       grouped[dateKey].tournaments.push(tournament);
-      grouped[dateKey].totalBuyInGroups += tournament.totalPlayers; // totalPlayers 現在存的是買入組數
+      grouped[dateKey].totalBuyInGroups += tournament.totalPlayers;
       grouped[dateKey].totalBuyIn += tournament.totalBuyIn;
-      // 如果有提拨金额字段，累加（目前 TournamentRecord 没有这个字段，先设为0）
-      // grouped[dateKey].totalDeduction += (tournament as any).deduction || 0;
     });
 
     // 转换为数组并按日期倒序排列
@@ -115,8 +97,28 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
     );
   }, [tournaments]);
 
-  // 只顯示今天的賽事（已經在 groupedTournaments 中過濾）
-  const filteredGroups = groupedTournaments;
+  // 应用搜索和日期筛选
+  const filteredGroups = useMemo(() => {
+    let filtered = groupedTournaments;
+
+    // 日期筛选
+    if (filterDate) {
+      filtered = filtered.filter(group => group.date === filterDate);
+    }
+
+    // 搜索筛选（搜索賽事名稱或會編）
+    if (searchTerm.trim()) {
+      filtered = filtered.map(group => ({
+        ...group,
+        tournaments: group.tournaments.filter(t => 
+          t.tournamentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          t.players.some(p => p.memberId.includes(searchTerm))
+        )
+      })).filter(group => group.tournaments.length > 0);
+    }
+
+    return filtered;
+  }, [groupedTournaments, filterDate, searchTerm]);
 
   const toggleDate = (date: string) => {
     const newExpanded = new Set(expandedDates);
@@ -136,7 +138,34 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
     }
   };
 
+  const handleDateFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFilterDate(e.target.value);
+    // 如果选择了日期，自动展开该日期
+    if (e.target.value) {
+      setExpandedDates(new Set([e.target.value]));
+    }
+  };
 
+  const clearDateFilter = () => {
+    setFilterDate('');
+    // 恢复展开所有日期
+    const dates = new Set(tournaments.map(t => getDateKey(t.date)));
+    setExpandedDates(dates);
+  };
+
+  const clearSearch = () => {
+    setSearchTerm('');
+  };
+
+  // 計算總統計
+  const totalStats = useMemo(() => {
+    return filteredGroups.reduce((acc, group) => {
+      acc.totalBuyInGroups += group.totalBuyInGroups;
+      acc.totalBuyIn += group.totalBuyIn;
+      acc.totalTournaments += group.tournaments.length;
+      return acc;
+    }, { totalBuyInGroups: 0, totalBuyIn: 0, totalTournaments: 0 });
+  }, [filteredGroups]);
 
   return (
     <div className="min-h-screen text-white relative bg-black">
@@ -151,113 +180,113 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
         <div className="absolute bottom-32 left-1/4 w-24 h-24 chip-float chip-glow opacity-20" style={{ animationDelay: '2s' }}>
           <div className="chip w-24 h-24 rounded-full"></div>
         </div>
-        <div className="absolute top-1/2 right-10 w-18 h-18 chip-float chip-glow opacity-15" style={{ animationDelay: '1.5s' }}>
-          <div className="chip w-18 h-18 rounded-full"></div>
-        </div>
-        <div className="absolute bottom-20 right-1/3 w-22 h-22 chip-float chip-glow opacity-18" style={{ animationDelay: '2.5s' }}>
-          <div className="chip w-22 h-22 rounded-full"></div>
-        </div>
       </div>
 
       <div className="max-w-7xl mx-auto p-6 relative z-10">
-        {/* 所有賽事記錄和帳號管理按鈕 - 平行排列 */}
-        <div className="flex justify-between items-center mb-4 gap-3">
-          {/* 左側：所有賽事記錄按鈕 */}
-          {onViewAllTournaments && (
-            <button
-              onClick={onViewAllTournaments}
-              className="px-4 md:px-6 py-2 md:py-3 bg-white hover:bg-gray-100 text-black rounded-xl text-sm md:text-base font-semibold transition-all duration-200 border-2 border-white shadow-lg flex items-center gap-2"
-            >
-              <span>📋</span>
-              <span>所有賽事記錄</span>
-            </button>
-          )}
-
-          {/* 右側：登出和帳號管理按鈕 */}
-          {(onLogout || onOpenUserManagement) && (
-            <div className="flex gap-3">
-            {onOpenUserManagement && (
-              <button
-                onClick={onOpenUserManagement}
-                className="px-4 md:px-6 py-2 md:py-3 bg-poker-gold-600 hover:bg-poker-gold-700 text-white rounded-xl text-sm md:text-base font-semibold transition-all duration-200 border-2 border-poker-gold-500 shadow-lg flex items-center gap-2"
-              >
-                <span>👥</span>
-                <span className="hidden sm:inline">帳號管理</span>
-                <span className="sm:hidden">管理</span>
-              </button>
-            )}
-              {onLogout && (
-                <button
-                  onClick={onLogout}
-                  className="px-4 md:px-6 py-2 md:py-3 bg-white hover:bg-gray-100 rounded-xl text-sm md:text-base font-semibold text-black transition-all duration-200 border-2 border-white shadow-lg flex items-center gap-2"
-                >
-                  <span>🚪</span>
-                  <span>登出</span>
-                </button>
-              )}
-            </div>
-          )}
+        {/* 返回按鈕 */}
+        <div className="mb-6">
+          <button
+            onClick={onBack}
+            className="px-4 md:px-6 py-2 md:py-3 bg-white hover:bg-gray-100 text-black rounded-xl text-sm md:text-base font-semibold transition-all duration-200 border-2 border-white shadow-lg flex items-center gap-2"
+          >
+            <span>←</span>
+            <span>返回首頁</span>
+          </button>
         </div>
 
-        {/* 頂部欄 */}
+        {/* 標題 */}
         <div className="mb-8 text-center">
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <div className="text-6xl filter drop-shadow-[0_0_10px_rgba(255,215,0,0.8)]">🃏</div>
-            <h1 className="text-5xl md:text-6xl font-display font-black text-poker-gold-400 gold-glow">
-              LUCKY POKER
-            </h1>
-            <div className="text-6xl filter drop-shadow-[0_0_10px_rgba(255,215,0,0.8)]">🂮</div>
-          </div>
-          <p className="text-2xl md:text-3xl font-body font-light text-poker-gold-300 tracking-wider drop-shadow-[0_0_8px_rgba(255,215,0,0.6)]">
-            賽事管理系統
+          <h1 className="text-4xl md:text-5xl font-display font-black text-poker-gold-400 gold-glow mb-4">
+            所有賽事記錄
+          </h1>
+          <p className="text-lg md:text-xl text-poker-gold-300">
+            查詢與管理所有歷史賽事記錄
           </p>
-          <div className="flex items-center justify-center gap-2 mt-4">
-            <div className="w-16 h-1 bg-gradient-to-r from-transparent via-poker-gold-500 to-transparent"></div>
-            <div className="text-poker-gold-400 text-xl filter drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]">♠ ♥ ♦ ♣</div>
-            <div className="w-16 h-1 bg-gradient-to-r from-transparent via-poker-gold-500 to-transparent"></div>
+        </div>
+
+        {/* 總統計 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-gradient-to-br from-blue-600 to-blue-800 bg-opacity-40 px-6 py-4 rounded-xl border border-blue-500 border-opacity-50 shadow-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-2xl">📊</span>
+              <p className="text-sm text-blue-200 font-medium">總賽事數</p>
+            </div>
+            <p className="text-2xl font-bold text-blue-100">{totalStats.totalTournaments} 場</p>
+          </div>
+          <div className="bg-gradient-to-br from-poker-gold-600 to-poker-gold-800 bg-opacity-40 px-6 py-4 rounded-xl border border-poker-gold-500 border-opacity-50 shadow-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-2xl">👥</span>
+              <p className="text-sm text-poker-gold-200 font-medium">總買入組數</p>
+            </div>
+            <p className="text-2xl font-bold text-poker-gold-200">{totalStats.totalBuyInGroups} 組</p>
+          </div>
+          <div className="bg-gradient-to-br from-green-600 to-green-800 bg-opacity-40 px-6 py-4 rounded-xl border border-green-500 border-opacity-50 shadow-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-2xl">💰</span>
+              <p className="text-sm text-green-200 font-medium">總買入金額</p>
+            </div>
+            <p className="text-2xl font-bold text-green-200">{formatCurrency(totalStats.totalBuyIn)}</p>
           </div>
         </div>
 
-        {/* 主功能區 */}
-        <div className="mb-8 flex flex-col md:flex-row justify-center items-center gap-4 flex-wrap">
-          <button
-            onClick={onCreateNew}
-            className="group relative bg-white hover:bg-gray-100 text-black font-bold py-6 px-12 rounded-2xl text-2xl md:text-3xl shadow-2xl transform hover:scale-105 transition-all duration-300 flex items-center gap-4 overflow-hidden border-2 border-white"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-200 to-transparent opacity-0 group-hover:opacity-30 transform -skew-x-12 group-hover:translate-x-full transition-all duration-1000"></div>
-            <span className="text-4xl relative z-10">🃏</span>
-            <span className="relative z-10">創建新賽事</span>
-          </button>
-          <button
-            onClick={() => setShowMemberQuery(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-xl transition-all duration-200 border-2 border-blue-500 flex items-center gap-2"
-          >
-            <span>🔍</span>
-            <span>會員查詢</span>
-          </button>
-          <button
-            onClick={() => setShowAuditLog(true)}
-            className="bg-white hover:bg-gray-100 text-black font-semibold py-4 px-8 rounded-xl text-lg shadow-xl transition-all duration-200 border-2 border-white flex items-center gap-2"
-          >
-            <span>📋</span>
-            <span>操作日誌</span>
-          </button>
+        {/* 搜索和篩選區 */}
+        <div className="bg-black bg-opacity-80 rounded-3xl p-6 backdrop-blur-md border-2 border-poker-gold-600 border-opacity-50 shadow-2xl shadow-poker-gold-500/20 mb-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* 搜索框 */}
+            <div className="flex-1">
+              <label className="block text-sm font-semibold text-poker-gold-300 mb-2">搜索賽事或會編</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="輸入賽事名稱或會編..."
+                  className="flex-1 px-4 py-2 bg-gray-900 border-2 border-poker-gold-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-poker-gold-500 focus:border-poker-gold-400 transition-all"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={clearSearch}
+                    className="px-4 py-2 bg-white hover:bg-gray-100 rounded-lg text-sm font-semibold text-black transition-all duration-200 border-2 border-white shadow-lg"
+                  >
+                    ✕ 清除
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 日期篩選 */}
+            <div className="flex-1">
+              <label className="block text-sm font-semibold text-poker-gold-300 mb-2">快速跳轉日期</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={filterDate}
+                  onChange={handleDateFilterChange}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="flex-1 px-4 py-2 bg-gray-900 border-2 border-poker-gold-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-poker-gold-500 focus:border-poker-gold-400 transition-all"
+                />
+                {filterDate && (
+                  <button
+                    onClick={clearDateFilter}
+                    className="px-4 py-2 bg-white hover:bg-gray-100 rounded-lg text-sm font-semibold text-black transition-all duration-200 border-2 border-white shadow-lg"
+                  >
+                    ✕ 清除
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* 今日賽事記錄區 */}
+        {/* 賽事記錄列表 */}
         <div className="bg-black bg-opacity-80 rounded-3xl p-6 backdrop-blur-md border-2 border-poker-gold-600 border-opacity-50 shadow-2xl shadow-poker-gold-500/20">
-          <div className="mb-6">
-            <h2 className="text-2xl md:text-3xl font-bold">今日賽事記錄</h2>
-            <p className="text-sm text-gray-400 mt-2">顯示 {new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })} 的賽事</p>
-          </div>
-          
           {filteredGroups.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <p className="text-xl mb-2">
-                今日尚無賽事記錄
+                {searchTerm || filterDate ? '沒有找到符合條件的賽事記錄' : '尚無賽事記錄'}
               </p>
               <p className="text-sm">
-                點擊上方「創建新賽事」開始第一場賽事，或點擊「所有賽事記錄」查看歷史記錄
+                {searchTerm || filterDate ? '請調整搜索條件或清除篩選' : '點擊「返回首頁」創建新賽事'}
               </p>
             </div>
           ) : (
@@ -303,17 +332,6 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
                               {formatCurrency(group.totalBuyIn)}
                             </p>
                           </div>
-                          {group.totalDeduction > 0 && (
-                            <div className="bg-gradient-to-br from-orange-600 to-orange-800 bg-opacity-40 px-4 py-3 rounded-xl border border-orange-500 border-opacity-50 shadow-lg">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-lg">📊</span>
-                                <p className="text-xs text-orange-200 font-medium">總提撥金額</p>
-                              </div>
-                              <p className="text-xl font-bold text-orange-200">
-                                {formatCurrency(group.totalDeduction)}
-                              </p>
-                            </div>
-                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-3 relative z-10">
@@ -414,16 +432,6 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
           )}
         </div>
       </div>
-
-      {/* 操作日誌面板 */}
-      {showAuditLog && (
-        <AuditLogPanel onClose={() => setShowAuditLog(false)} />
-      )}
-
-      {/* 會員查詢面板 */}
-      {showMemberQuery && (
-        <MemberPaymentQuery onClose={() => setShowMemberQuery(false)} />
-      )}
     </div>
   );
 }
