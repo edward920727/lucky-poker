@@ -2,7 +2,7 @@
  * 登入驗證工具
  */
 
-import { validateUserCredentials } from './userManagement';
+import { validateUserCredentials, validateUserCredentialsAsync } from './userManagement';
 
 const STORAGE_KEY = 'lucky_poker_auth';
 
@@ -13,14 +13,38 @@ export interface AuthState {
 }
 
 /**
- * 驗證登入憑證
+ * 驗證登入憑證（異步，支援雲端同步）
+ */
+export async function validateCredentialsAsync(username: string, password: string): Promise<boolean> {
+  return await validateUserCredentialsAsync(username, password);
+}
+
+/**
+ * 驗證登入憑證（同步版本，用於向後兼容）
  */
 export function validateCredentials(username: string, password: string): boolean {
   return validateUserCredentials(username, password);
 }
 
 /**
- * 登入
+ * 登入（異步，支援雲端同步）
+ */
+export async function loginAsync(username: string, password: string): Promise<boolean> {
+  const isValid = await validateCredentialsAsync(username, password);
+  if (isValid) {
+    const authState: AuthState = {
+      isAuthenticated: true,
+      username,
+      loginTime: Date.now(),
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(authState));
+    return true;
+  }
+  return false;
+}
+
+/**
+ * 登入（同步版本，用於向後兼容）
  */
 export function login(username: string, password: string): boolean {
   if (validateCredentials(username, password)) {

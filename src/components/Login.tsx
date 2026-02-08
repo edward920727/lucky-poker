@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { login } from '../utils/auth';
+import { loginAsync } from '../utils/auth';
 
 interface LoginProps {
   onLoginSuccess: () => void;
@@ -16,17 +16,23 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     setError('');
     setIsLoading(true);
 
-    // 模擬短暫延遲以提供更好的 UX
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    if (login(username, password)) {
-      onLoginSuccess();
-    } else {
-      setError('帳號或密碼錯誤，請重新輸入');
+    try {
+      // 使用異步登入，會先從雲端同步最新的用戶列表
+      const success = await loginAsync(username, password);
+      
+      if (success) {
+        onLoginSuccess();
+      } else {
+        setError('帳號或密碼錯誤，請重新輸入');
+        setPassword('');
+      }
+    } catch (error) {
+      console.error('登入失敗:', error);
+      setError('登入失敗，請檢查網路連線後再試');
       setPassword('');
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   return (

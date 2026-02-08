@@ -378,19 +378,37 @@ export function updateUserPassword(username: string, newPassword: string): { suc
 }
 
 /**
- * 驗證用戶憑證
+ * 驗證用戶憑證（異步，支援雲端同步）
  */
-export function validateUserCredentials(username: string, password: string): boolean {
-  const users = getAllUsers();
+export async function validateUserCredentialsAsync(username: string, password: string): Promise<boolean> {
+  const users = await getAllUsersAsync();
   const user = users.find(u => u.username === username && u.password === password);
   return !!user;
 }
 
 /**
- * 檢查用戶是否為管理員
+ * 驗證用戶憑證（同步版本，用於向後兼容）
+ */
+export function validateUserCredentials(username: string, password: string): boolean {
+  const users = getAllUsersLocal();
+  const user = users.find(u => u.username === username && u.password === password);
+  return !!user;
+}
+
+/**
+ * 檢查用戶是否為管理員（異步，支援雲端同步）
+ */
+export async function isAdminAsync(username: string): Promise<boolean> {
+  const users = await getAllUsersAsync();
+  const user = users.find(u => u.username === username);
+  return user?.isAdmin === true;
+}
+
+/**
+ * 檢查用戶是否為管理員（同步版本，用於向後兼容）
  */
 export function isAdmin(username: string): boolean {
-  const users = getAllUsers();
+  const users = getAllUsersLocal();
   const user = users.find(u => u.username === username);
   return user?.isAdmin === true;
 }
