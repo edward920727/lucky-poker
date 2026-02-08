@@ -11,7 +11,6 @@ interface PlayerInputProps {
 
 export default function PlayerInput({ onAddPlayer }: PlayerInputProps) {
   const [memberId, setMemberId] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [showKeyboard, setShowKeyboard] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [historyData, setHistoryData] = useState<any>(null);
@@ -32,17 +31,10 @@ export default function PlayerInput({ onAddPlayer }: PlayerInputProps) {
       alert('請輸入會編');
       return;
     }
-    onAddPlayer(memberId.trim(), paymentMethod);
+    // 新增玩家時使用默認支付方式 'cash'，之後可在玩家列表中調整
+    onAddPlayer(memberId.trim(), 'cash');
     setMemberId('');
-    setPaymentMethod('cash');
     setShowKeyboard(false);
-  };
-
-  const paymentMethodLabels: Record<PaymentMethod, string> = {
-    cash: '現金',
-    transfer: '轉帳',
-    points: '點數',
-    unpaid: '未付',
   };
 
   return (
@@ -63,25 +55,9 @@ export default function PlayerInput({ onAddPlayer }: PlayerInputProps) {
             className="w-full px-4 py-3 bg-gray-700 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             readOnly
           />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">支付方式</label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {(['cash', 'transfer', 'points', 'unpaid'] as PaymentMethod[]).map((method) => (
-              <button
-                key={method}
-                type="button"
-                onClick={() => setPaymentMethod(method)}
-                className={`py-3 px-4 rounded-lg font-semibold transition-all duration-200 border-2 ${
-                  paymentMethod === method
-                    ? 'bg-white text-black border-white'
-                    : 'bg-white text-black border-white hover:bg-gray-100'
-                }`}
-              >
-                {paymentMethodLabels[method]}
-              </button>
-            ))}
-          </div>
+          <p className="text-xs text-gray-400 mt-2">
+            💡 提示：支付方式可在玩家列表中調整
+          </p>
         </div>
         <button
           type="submit"

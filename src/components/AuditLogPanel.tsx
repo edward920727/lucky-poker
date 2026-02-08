@@ -140,27 +140,32 @@ export default function AuditLogPanel({ onClose, memberId }: AuditLogPanelProps)
             {logs.map((log) => (
               <div
                 key={log.id}
-                className="bg-gray-700 p-4 rounded-lg border-l-4 border-blue-500"
+                className="bg-gray-700 p-4 rounded-lg border-l-4 border-blue-500 hover:bg-gray-600 transition-colors"
               >
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-3">
-                    <span className={`font-semibold ${getActionColor(log.action)}`}>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    <span className={`font-semibold text-sm sm:text-base ${getActionColor(log.action)}`}>
                       [{getActionLabel(log.action)}]
                     </span>
-                    <span className="font-mono text-lg">會編 {log.memberId}</span>
+                    <span className="font-mono text-base sm:text-lg">會編 {log.memberId}</span>
+                    {log.operator && log.operator !== '系统' && (
+                      <span className="px-2 sm:px-3 py-1 bg-poker-gold-600 text-white text-xs sm:text-sm font-semibold rounded-full border border-poker-gold-400 whitespace-nowrap">
+                        👤 {log.operator}
+                      </span>
+                    )}
+                    {(!log.operator || log.operator === '系统') && (
+                      <span className="px-2 sm:px-3 py-1 bg-gray-600 text-gray-300 text-xs sm:text-sm font-semibold rounded-full border border-gray-500 whitespace-nowrap">
+                        🤖 系統
+                      </span>
+                    )}
                   </div>
-                  <span className="text-sm text-gray-400">
+                  <span className="text-xs sm:text-sm text-gray-400 whitespace-nowrap">
                     {formatDate(log.timestamp)}
                   </span>
                 </div>
-                <div className="text-sm text-gray-300">
+                <div className="text-sm text-gray-300 mt-2">
                   {log.description}
                 </div>
-                {log.operator && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    操作者: {log.operator}
-                  </div>
-                )}
               </div>
             ))}
           </div>

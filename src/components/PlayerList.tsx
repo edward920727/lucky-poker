@@ -10,14 +10,12 @@ interface PlayerListProps {
 const paymentMethodLabels: Record<PaymentMethod, string> = {
   cash: '現金',
   transfer: '轉帳',
-  points: '點數',
   unpaid: '未付',
 };
 
 const paymentMethodColors: Record<PaymentMethod, string> = {
   cash: 'bg-green-600',
   transfer: 'bg-blue-600',
-  points: 'bg-purple-600',
   unpaid: 'bg-red-600',
 };
 
@@ -75,7 +73,7 @@ export default function PlayerList({
                 onChange={(e) => onUpdatePlayer(player.id, { paymentMethod: e.target.value as PaymentMethod })}
                 className={`px-3 py-1.5 rounded-lg text-sm font-semibold text-white ${paymentMethodColors[player.paymentMethod]}`}
               >
-                {(['cash', 'transfer', 'points', 'unpaid'] as PaymentMethod[]).map((method) => (
+                {(['cash', 'transfer', 'unpaid'] as PaymentMethod[]).map((method) => (
                   <option key={method} value={method} className="bg-gray-800">
                     {paymentMethodLabels[method]}
                   </option>
@@ -172,7 +170,7 @@ export default function PlayerList({
                     onChange={(e) => onUpdatePlayer(player.id, { paymentMethod: e.target.value as PaymentMethod })}
                     className={`px-3 py-1 rounded text-sm font-semibold text-white ${paymentMethodColors[player.paymentMethod]}`}
                   >
-                    {(['cash', 'transfer', 'points', 'unpaid'] as PaymentMethod[]).map((method) => (
+                    {(['cash', 'transfer', 'unpaid'] as PaymentMethod[]).map((method) => (
                       <option key={method} value={method} className="bg-gray-800">
                         {paymentMethodLabels[method]}
                       </option>

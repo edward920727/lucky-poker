@@ -51,7 +51,7 @@ export default function TournamentDashboard({
     };
 
     onPlayersChange([...players, newPlayer]);
-    logAction('create', memberId, '系统');
+    logAction('create', memberId);
   };
 
   const handleUpdatePlayer = (id: string, updates: Partial<Player>) => {
@@ -60,13 +60,13 @@ export default function TournamentDashboard({
 
     // 记录操作日志
     if (updates.currentChips !== undefined && updates.currentChips !== player.currentChips) {
-      logAction('chip_change', player.memberId, '系统', 'currentChips', player.currentChips, updates.currentChips);
+      logAction('chip_change', player.memberId, undefined, 'currentChips', player.currentChips, updates.currentChips);
     }
     if (updates.buyInCount !== undefined && updates.buyInCount !== player.buyInCount) {
-      logAction('buyin', player.memberId, '系统', 'buyInCount', player.buyInCount, updates.buyInCount);
+      logAction('buyin', player.memberId, undefined, 'buyInCount', player.buyInCount, updates.buyInCount);
     }
     if (updates.paymentMethod !== undefined && updates.paymentMethod !== player.paymentMethod) {
-      logAction('update', player.memberId, '系统', 'paymentMethod', player.paymentMethod, updates.paymentMethod);
+      logAction('update', player.memberId, undefined, 'paymentMethod', player.paymentMethod, updates.paymentMethod);
     }
 
     onPlayersChange(
@@ -77,7 +77,7 @@ export default function TournamentDashboard({
   const handleRemovePlayer = (id: string) => {
     const player = players.find(p => p.id === id);
     if (player) {
-      logAction('delete', player.memberId, '系统');
+      logAction('delete', player.memberId);
     }
     onPlayersChange(players.filter(p => p.id !== id));
   };

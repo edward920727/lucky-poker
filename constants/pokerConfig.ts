@@ -8,7 +8,7 @@ export const TOURNAMENT_TYPES = {
 
 export type TournamentType = keyof typeof TOURNAMENT_TYPES;
 
-export type PaymentMethod = 'cash' | 'transfer' | 'points' | 'unpaid';
+export type PaymentMethod = 'cash' | 'transfer' | 'unpaid';
 
 export interface Player {
   id: string;
