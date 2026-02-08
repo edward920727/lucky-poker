@@ -30,22 +30,23 @@ export default function TournamentSelector({ onSelect, onBack }: TournamentSelec
       {onBack && (
         <button
           onClick={onBack}
-          className="absolute top-6 left-6 px-6 py-3 bg-white hover:bg-gray-100 rounded-xl text-lg font-semibold text-black transition-all duration-200 z-10 border-2 border-white shadow-xl flex items-center gap-2"
+          className="absolute top-4 md:top-6 left-4 md:left-6 px-4 md:px-6 py-2 md:py-3 bg-white hover:bg-gray-100 rounded-xl text-sm md:text-lg font-semibold text-black transition-all duration-200 z-20 border-2 border-white shadow-xl flex items-center gap-1 md:gap-2"
         >
           <span>←</span>
-          <span>返回首頁</span>
+          <span className="hidden sm:inline">返回首頁</span>
+          <span className="sm:hidden">返回</span>
         </button>
       )}
 
-      <div className="relative z-10 text-center mb-12">
-        <div className="flex items-center justify-center gap-4 mb-4">
-          <div className="text-7xl filter drop-shadow-[0_0_15px_rgba(255,215,0,0.8)]">🃏</div>
-          <h1 className="text-5xl md:text-7xl font-display font-black text-poker-gold-400 gold-glow">
+      <div className="relative z-10 text-center mb-8 md:mb-12 pt-16 md:pt-0 px-4">
+        <div className="flex items-center justify-center gap-2 md:gap-4 mb-4">
+          <div className="text-4xl md:text-7xl filter drop-shadow-[0_0_15px_rgba(255,215,0,0.8)]">🃏</div>
+          <h1 className="text-3xl md:text-7xl font-display font-black text-poker-gold-400 gold-glow">
             LUCKY POKER
           </h1>
-          <div className="text-7xl filter drop-shadow-[0_0_15px_rgba(255,215,0,0.8)]">🂮</div>
+          <div className="text-4xl md:text-7xl filter drop-shadow-[0_0_15px_rgba(255,215,0,0.8)]">🂮</div>
         </div>
-        <p className="text-2xl md:text-3xl text-poker-gold-300 font-body font-light tracking-wider mb-4 drop-shadow-[0_0_10px_rgba(255,215,0,0.6)]">
+        <p className="text-xl md:text-3xl text-poker-gold-300 font-body font-light tracking-wider mb-4 drop-shadow-[0_0_10px_rgba(255,215,0,0.6)]">
           選擇賽事類型
         </p>
         <div className="flex items-center justify-center gap-3">
