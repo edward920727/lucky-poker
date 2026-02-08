@@ -19,7 +19,8 @@ interface GroupedTournaments {
 export default function AllTournamentsView({ onBack, onViewTournament }: AllTournamentsViewProps) {
   const [tournaments, setTournaments] = useState<TournamentRecord[]>([]);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
-  const [filterDate, setFilterDate] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   useEffect(() => {
@@ -97,13 +98,27 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
     );
   }, [tournaments]);
 
-  // 应用搜索和日期筛选
+  // 应用搜索和日期范围筛选
   const filteredGroups = useMemo(() => {
     let filtered = groupedTournaments;
 
-    // 日期筛选
-    if (filterDate) {
-      filtered = filtered.filter(group => group.date === filterDate);
+    // 日期范围筛选（直接比较 YYYY-MM-DD 字符串，避免时区问题）
+    if (startDate || endDate) {
+      filtered = filtered.filter(group => {
+        const groupDate = group.date; // 已经是 YYYY-MM-DD 格式
+        
+        if (startDate && endDate) {
+          // 有开始和结束日期，检查是否在范围内（字符串比较）
+          return groupDate >= startDate && groupDate <= endDate;
+        } else if (startDate) {
+          // 只有开始日期，筛选该日期及之后
+          return groupDate >= startDate;
+        } else if (endDate) {
+          // 只有结束日期，筛选该日期及之前
+          return groupDate <= endDate;
+        }
+        return true;
+      });
     }
 
     // 搜索筛选（搜索賽事名稱或會編）
@@ -118,7 +133,7 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
     }
 
     return filtered;
-  }, [groupedTournaments, filterDate, searchTerm]);
+  }, [groupedTournaments, startDate, endDate, searchTerm]);
 
   const toggleDate = (date: string) => {
     const newExpanded = new Set(expandedDates);
@@ -138,16 +153,60 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
     }
   };
 
-  const handleDateFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilterDate(e.target.value);
-    // 如果选择了日期，自动展开该日期
-    if (e.target.value) {
-      setExpandedDates(new Set([e.target.value]));
+  // 快捷日期範圍設置
+  const setDateRange = (range: 'today' | 'week' | 'month' | 'year' | 'all') => {
+    const now = new Date();
+    // 使用本地時區獲取今天的日期字符串（YYYY-MM-DD）
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
+    switch (range) {
+      case 'today':
+        setStartDate(todayStr);
+        setEndDate(todayStr);
+        setExpandedDates(new Set([todayStr]));
+        break;
+      case 'week':
+        // 計算本週第一天（週日）
+        const dayOfWeek = now.getDay(); // 0=週日, 1=週一, ..., 6=週六
+        const weekStartDate = new Date(now);
+        weekStartDate.setDate(now.getDate() - dayOfWeek);
+        const weekStartStr = `${weekStartDate.getFullYear()}-${String(weekStartDate.getMonth() + 1).padStart(2, '0')}-${String(weekStartDate.getDate()).padStart(2, '0')}`;
+        setStartDate(weekStartStr);
+        setEndDate(todayStr);
+        // 展開本週的所有日期
+        const weekDates = new Set<string>();
+        for (let i = 0; i <= dayOfWeek; i++) {
+          const date = new Date(weekStartDate);
+          date.setDate(weekStartDate.getDate() + i);
+          const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          weekDates.add(dateStr);
+        }
+        setExpandedDates(weekDates);
+        break;
+      case 'month':
+        // 本月第一天
+        const monthStartStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        setStartDate(monthStartStr);
+        setEndDate(todayStr);
+        break;
+      case 'year':
+        // 今年第一天
+        const yearStartStr = `${now.getFullYear()}-01-01`;
+        setStartDate(yearStartStr);
+        setEndDate(todayStr);
+        break;
+      case 'all':
+        setStartDate('');
+        setEndDate('');
+        const dates = new Set(tournaments.map(t => getDateKey(t.date)));
+        setExpandedDates(dates);
+        break;
     }
   };
 
   const clearDateFilter = () => {
-    setFilterDate('');
+    setStartDate('');
+    setEndDate('');
     // 恢复展开所有日期
     const dates = new Set(tournaments.map(t => getDateKey(t.date)));
     setExpandedDates(dates);
@@ -231,6 +290,43 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
 
         {/* 搜索和篩選區 */}
         <div className="bg-black bg-opacity-80 rounded-3xl p-6 backdrop-blur-md border-2 border-poker-gold-600 border-opacity-50 shadow-2xl shadow-poker-gold-500/20 mb-6">
+          {/* 快捷日期範圍按鈕 */}
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-poker-gold-300 mb-2">快速選擇期間</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setDateRange('today')}
+                className="px-4 py-2 bg-poker-gold-600 hover:bg-poker-gold-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 border-2 border-poker-gold-500 shadow-lg"
+              >
+                📅 今天
+              </button>
+              <button
+                onClick={() => setDateRange('week')}
+                className="px-4 py-2 bg-poker-gold-600 hover:bg-poker-gold-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 border-2 border-poker-gold-500 shadow-lg"
+              >
+                📆 本週
+              </button>
+              <button
+                onClick={() => setDateRange('month')}
+                className="px-4 py-2 bg-poker-gold-600 hover:bg-poker-gold-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 border-2 border-poker-gold-500 shadow-lg"
+              >
+                📊 本月
+              </button>
+              <button
+                onClick={() => setDateRange('year')}
+                className="px-4 py-2 bg-poker-gold-600 hover:bg-poker-gold-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 border-2 border-poker-gold-500 shadow-lg"
+              >
+                📈 本年
+              </button>
+              <button
+                onClick={() => setDateRange('all')}
+                className="px-4 py-2 bg-white hover:bg-gray-100 text-black rounded-lg text-sm font-semibold transition-all duration-200 border-2 border-white shadow-lg"
+              >
+                🌐 全部
+              </button>
+            </div>
+          </div>
+
           <div className="flex flex-col md:flex-row gap-4">
             {/* 搜索框 */}
             <div className="flex-1">
@@ -254,21 +350,36 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
               </div>
             </div>
 
-            {/* 日期篩選 */}
+            {/* 日期範圍篩選 */}
             <div className="flex-1">
-              <label className="block text-sm font-semibold text-poker-gold-300 mb-2">快速跳轉日期</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  value={filterDate}
-                  onChange={handleDateFilterChange}
-                  max={new Date().toISOString().split('T')[0]}
-                  className="flex-1 px-4 py-2 bg-gray-900 border-2 border-poker-gold-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-poker-gold-500 focus:border-poker-gold-400 transition-all"
-                />
-                {filterDate && (
+              <label className="block text-sm font-semibold text-poker-gold-300 mb-2">自訂日期範圍</label>
+              <div className="flex flex-col sm:flex-row items-center gap-2">
+                <div className="flex-1 flex items-center gap-2">
+                  <label className="text-xs text-gray-400 whitespace-nowrap">開始日期</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    max={endDate || new Date().toISOString().split('T')[0]}
+                    className="flex-1 px-4 py-2 bg-gray-900 border-2 border-poker-gold-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-poker-gold-500 focus:border-poker-gold-400 transition-all"
+                  />
+                </div>
+                <div className="text-poker-gold-400 font-bold">~</div>
+                <div className="flex-1 flex items-center gap-2">
+                  <label className="text-xs text-gray-400 whitespace-nowrap">結束日期</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    min={startDate}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="flex-1 px-4 py-2 bg-gray-900 border-2 border-poker-gold-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-poker-gold-500 focus:border-poker-gold-400 transition-all"
+                  />
+                </div>
+                {(startDate || endDate) && (
                   <button
                     onClick={clearDateFilter}
-                    className="px-4 py-2 bg-white hover:bg-gray-100 rounded-lg text-sm font-semibold text-black transition-all duration-200 border-2 border-white shadow-lg"
+                    className="px-4 py-2 bg-white hover:bg-gray-100 rounded-lg text-sm font-semibold text-black transition-all duration-200 border-2 border-white shadow-lg whitespace-nowrap"
                   >
                     ✕ 清除
                   </button>
@@ -283,10 +394,10 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
           {filteredGroups.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <p className="text-xl mb-2">
-                {searchTerm || filterDate ? '沒有找到符合條件的賽事記錄' : '尚無賽事記錄'}
+                {searchTerm || startDate || endDate ? '沒有找到符合條件的賽事記錄' : '尚無賽事記錄'}
               </p>
               <p className="text-sm">
-                {searchTerm || filterDate ? '請調整搜索條件或清除篩選' : '點擊「返回首頁」創建新賽事'}
+                {searchTerm || startDate || endDate ? '請調整搜索條件或清除篩選' : '點擊「返回首頁」創建新賽事'}
               </p>
             </div>
           ) : (
