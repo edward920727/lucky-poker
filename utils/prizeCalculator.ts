@@ -63,7 +63,8 @@ export function calculatePrize(
 
   // 按筹码从高到低排序
   const sortedPlayers = [...players].sort((a, b) => b.currentChips - a.currentChips);
-  const totalChips = sortedPlayers.reduce((sum, p) => sum + p.currentChips, 0);
+  // 只計算籌碼不為0的玩家的總籌碼
+  const totalChips = sortedPlayers.filter(p => p.currentChips > 0).reduce((sum, p) => sum + p.currentChips, 0);
 
   // 第一步：先按筹码占比计算所有玩家应该得到的奖金
   const chipBasedPrizes: Array<{ memberId: string; rank: number; chips: number; chipPercentage: number; amount: number }> = [];
@@ -88,10 +89,14 @@ export function calculatePrize(
   const chipBasedTotal = chipBasedPrizes.reduce((sum, p) => sum + p.amount, 0);
 
   // 第二步：从总奖池中提拨前三名的奖金（按百分比）
+  // 只計算籌碼不為0的前三名玩家
   const topThreePrizes: TopThreePrize[] = [];
   let topThreeTotal = 0;
+  
+  // 找出籌碼不為0的前三名玩家
+  const eligibleTopThree = sortedPlayers.filter(p => p.currentChips > 0).slice(0, 3);
 
-  for (let i = 0; i < Math.min(3, sortedPlayers.length); i++) {
+  for (let i = 0; i < Math.min(3, eligibleTopThree.length); i++) {
     const percentage = topThreePercentages[i] || 0;
     const originalAmount = (totalPrizePool * percentage) / 100;
     // 四舍五入到百位
@@ -115,13 +120,31 @@ export function calculatePrize(
     const player = sortedPlayers[i];
     const chipBasedPrize = chipBasedPrizes[i];
     
+    // 如果籌碼為0，獎金一定是0
+    if (player.currentChips === 0) {
+      finalPlayerPrizes.push({
+        memberId: player.memberId,
+        rank: i + 1,
+        chips: 0,
+        chipPercentage: 0,
+        chipBasedPrize: 0,
+        topThreeBonus: 0,
+        prizeAmount: 0,
+      });
+      continue;
+    }
+    
     // 计算剩余奖池中该玩家应得的份额
     const remainingChipPercentage = totalChips > 0 ? (player.currentChips / totalChips) * 100 : 0;
     const remainingAmount = (remainingPrizePool * remainingChipPercentage) / 100;
     const remainingRounded = Math.round(remainingAmount / 100) * 100;
     
-    // 前三名有提拨奖金
-    const topThreeBonus = i < 3 ? topThreePrizes[i].amount : 0;
+    // 前三名有提拨奖金（但只有籌碼不為0且是有效前三名的玩家才能獲得）
+    // 需要檢查這個玩家是否在 eligibleTopThree 中
+    const playerIndexInEligible = eligibleTopThree.findIndex(p => p.memberId === player.memberId);
+    const topThreeBonus = (playerIndexInEligible >= 0 && playerIndexInEligible < 3 && player.currentChips > 0) 
+      ? (topThreePrizes[playerIndexInEligible]?.amount || 0)
+      : 0;
     
     // 最终奖金 = 剩余奖池按筹码占比分配的部分 + 前三名提拨奖金
     const finalPrize = remainingRounded + topThreeBonus;

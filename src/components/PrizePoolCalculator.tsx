@@ -205,8 +205,18 @@ export default function PrizePoolCalculator({ players, tournamentType, onCalcula
           <label className="block text-sm font-medium mb-2">提撥金額 (NT$)</label>
           <input
             type="number"
-            value={deduction}
-            onChange={(e) => setDeduction(parseInt(e.target.value) || 0)}
+            value={deduction || ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === '' || value === null || value === undefined) {
+                setDeduction(0);
+                return;
+              }
+              const numValue = parseFloat(value);
+              if (!isNaN(numValue)) {
+                setDeduction(Math.max(0, numValue));
+              }
+            }}
             className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
