@@ -8,6 +8,7 @@ interface PrizePoolCalculatorProps {
 }
 
 export default function PrizePoolCalculator({ players, onCalculationChange }: PrizePoolCalculatorProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [entryFee, setEntryFee] = useState<number>(600);
   const [totalGroups, setTotalGroups] = useState<number>(0);
   const [deduction, setDeduction] = useState<number>(0);
@@ -46,14 +47,31 @@ export default function PrizePoolCalculator({ players, onCalculationChange }: Pr
   };
 
   return (
-    <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-2xl p-6 mb-6 border-2 border-poker-gold-600 border-opacity-40 shadow-xl shadow-poker-gold-500/20">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="text-3xl">🏆</div>
-        <h2 className="text-2xl font-display font-bold text-poker-gold-400">獎金分配計算器</h2>
-      </div>
+    <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-2xl p-4 md:p-6 mb-6 border-2 border-poker-gold-600 border-opacity-40 shadow-xl shadow-poker-gold-500/20">
+      {/* 標題區域 - 可點擊展開/收合 */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between gap-3 mb-4 hover:opacity-80 transition-opacity"
+      >
+        <div className="flex items-center gap-3">
+          <div className="text-2xl md:text-3xl">🏆</div>
+          <h2 className="text-xl md:text-2xl font-display font-bold text-poker-gold-400">獎金分配計算器</h2>
+        </div>
+        <svg
+          className={`w-6 h-6 text-poker-gold-400 transition-transform duration-300 ${isExpanded ? 'transform rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
 
-      {/* 輸入區域 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-6">
+      {/* 內容區域 - 可展開/收合 */}
+      {isExpanded && (
+        <div className="animate-fadeIn">
+          {/* 輸入區域 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-6">
         <div>
           <label className="block text-sm font-medium mb-2">報名費 (NT$)</label>
           <input
@@ -202,7 +220,9 @@ export default function PrizePoolCalculator({ players, onCalculationChange }: Pr
             🏆 前三名額外獲得提撥獎金
           </div>
         )}
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
