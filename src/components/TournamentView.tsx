@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { TournamentRecord } from '../../types/tournament';
 import { getTournamentById, updateTournament } from '../../utils/storage';
-import { TOURNAMENT_TYPES, Player, PaymentMethod } from '../../constants/pokerConfig';
+import { TOURNAMENT_TYPES, Player, PaymentMethod, PLAYER_HISTORY_DB } from '../../constants/pokerConfig';
 import StatsPanel from './StatsPanel';
 import ExportButton from './ExportButton';
 import PlayerList from './PlayerList';
 import { logAction } from '../../utils/auditLog';
+import VirtualKeyboard from './VirtualKeyboard';
 
 const paymentMethodLabels: Record<PaymentMethod, string> = {
   cash: '現金',
@@ -28,6 +29,8 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
   const [tournament, setTournament] = useState<TournamentRecord | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedPlayers, setEditedPlayers] = useState<Player[]>([]);
+  const [newMemberId, setNewMemberId] = useState('');
+  const [showKeyboard, setShowKeyboard] = useState(false);
 
   useEffect(() => {
     const record = getTournamentById(tournamentId);
@@ -105,6 +108,37 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
       logAction('delete', player.memberId);
     }
     setEditedPlayers(editedPlayers.filter(p => p.id !== id));
+  };
+
+  const handleAddPlayer = () => {
+    if (!tournament) return;
+    
+    if (!newMemberId.trim()) {
+      alert('請輸入會編');
+      return;
+    }
+
+    // 檢查是否已存在
+    if (editedPlayers.some(p => p.memberId === newMemberId.trim())) {
+      alert('該會編已存在！');
+      return;
+    }
+
+    const config = TOURNAMENT_TYPES[tournament.tournamentType];
+    const history = PLAYER_HISTORY_DB[newMemberId.trim()] || [];
+    const newPlayer: Player = {
+      id: Date.now().toString(),
+      memberId: newMemberId.trim(),
+      buyInCount: 1,
+      currentChips: config.startChip,
+      paymentMethod: 'cash',
+      history,
+    };
+
+    logAction('create', newPlayer.memberId);
+    setEditedPlayers([...editedPlayers, newPlayer]);
+    setNewMemberId('');
+    setShowKeyboard(false);
   };
 
   if (!tournament) {
@@ -214,19 +248,48 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
         {/* 玩家列表 */}
         <div className="relative z-10">
           {isEditMode ? (
-            editedPlayers.length > 0 ? (
-              <PlayerList
-                players={editedPlayers}
-                startChip={tournament.startChip}
-                onUpdatePlayer={handleUpdatePlayer}
-                onRemovePlayer={handleRemovePlayer}
-              />
-            ) : (
-              <div className="bg-gray-800 rounded-lg p-4 md:p-6">
-                <h2 className="text-xl md:text-2xl font-bold mb-4">玩家列表</h2>
-                <p className="text-gray-400 text-center py-8">此賽事尚無玩家記錄</p>
+            <>
+              {/* 新增玩家區域 */}
+              <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-2xl p-4 md:p-6 mb-4 border-2 border-poker-gold-600 border-opacity-40 shadow-xl shadow-poker-gold-500/20">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="text-2xl md:text-3xl">➕</div>
+                  <h2 className="text-xl md:text-2xl font-display font-bold text-poker-gold-400">新增玩家</h2>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="text"
+                    value={newMemberId}
+                    onChange={(e) => setNewMemberId(e.target.value)}
+                    onFocus={() => setShowKeyboard(true)}
+                    placeholder="點擊輸入會編"
+                    className="flex-1 px-4 py-3 bg-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    readOnly
+                  />
+                  <button
+                    onClick={handleAddPlayer}
+                    className="px-6 py-3 bg-white hover:bg-gray-100 rounded-lg text-base font-semibold text-black transition-all duration-200 border-2 border-white shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <span>➕</span>
+                    <span>新增</span>
+                  </button>
+                </div>
               </div>
-            )
+
+              {/* 玩家列表 */}
+              {editedPlayers.length > 0 ? (
+                <PlayerList
+                  players={editedPlayers}
+                  startChip={tournament.startChip}
+                  onUpdatePlayer={handleUpdatePlayer}
+                  onRemovePlayer={handleRemovePlayer}
+                />
+              ) : (
+                <div className="bg-gray-800 rounded-lg p-4 md:p-6">
+                  <h2 className="text-xl md:text-2xl font-bold mb-4">玩家列表</h2>
+                  <p className="text-gray-400 text-center py-8">此賽事尚無玩家記錄，請使用上方表單新增玩家</p>
+                </div>
+              )}
+            </>
           ) : (
           <div className="bg-gray-800 rounded-lg p-4 md:p-6">
             <h2 className="text-xl md:text-2xl font-bold mb-4">玩家列表</h2>
@@ -299,6 +362,15 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
           )}
         </div>
       </div>
+
+      {/* 虛擬鍵盤 */}
+      {showKeyboard && (
+        <VirtualKeyboard
+          value={newMemberId}
+          onChange={setNewMemberId}
+          onClose={() => setShowKeyboard(false)}
+        />
+      )}
     </div>
   );
 }
