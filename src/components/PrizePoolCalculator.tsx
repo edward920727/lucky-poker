@@ -17,7 +17,7 @@ export default function PrizePoolCalculator({ players, tournamentType, onCalcula
   const [isManualGroups, setIsManualGroups] = useState(false); // 是否手動設定總組數
   const [isManualEntryFee, setIsManualEntryFee] = useState(false); // 是否手動設定報名費
   const [deduction, setDeduction] = useState<number>(0);
-  const [topThreePercentages, setTopThreePercentages] = useState<[number, number, number]>([50, 30, 20]);
+  const [topThreePercentages, setTopThreePercentages] = useState<[number, number, number]>([15, 10, 5]);
 
   // 計算總買入次數（所有玩家的 buyInCount 總和）
   const totalBuyInCount = players.reduce((sum, p) => sum + p.buyInCount, 0);
