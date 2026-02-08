@@ -1,5 +1,5 @@
 import { Player, PaymentMethod } from '../../constants/pokerConfig';
-import { TournamentType, TOURNAMENT_TYPES } from '../../constants/pokerConfig';
+import { TournamentType } from '../../constants/pokerConfig';
 
 interface FinancialStatsProps {
   players: Player[];

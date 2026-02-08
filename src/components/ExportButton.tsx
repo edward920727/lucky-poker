@@ -1,16 +1,15 @@
 import { useRef } from 'react';
 import html2canvas from 'html2canvas';
-import { TournamentType, Player, TOURNAMENT_TYPES } from '../../constants/pokerConfig';
+import { Player } from '../../constants/pokerConfig';
 import { PrizeCalculationResult } from '../../utils/prizeCalculator';
 
 interface ExportButtonProps {
-  tournamentType: TournamentType;
   players: Player[];
   config: { name: string; startChip: number };
   prizeCalculation?: PrizeCalculationResult | null;
 }
 
-export default function ExportButton({ tournamentType, players, config, prizeCalculation }: ExportButtonProps) {
+export default function ExportButton({ players, config, prizeCalculation }: ExportButtonProps) {
   const exportRef = useRef<HTMLDivElement>(null);
 
   const handleExport = async () => {

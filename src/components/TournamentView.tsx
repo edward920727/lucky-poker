@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { TournamentRecord } from '../../types/tournament';
 import { getTournamentById } from '../../utils/storage';
 import { TOURNAMENT_TYPES } from '../../constants/pokerConfig';
-import PlayerList from './PlayerList';
 import StatsPanel from './StatsPanel';
 import ExportButton from './ExportButton';
 
@@ -70,7 +69,6 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
             </p>
           </div>
           <ExportButton 
-            tournamentType={tournament.tournamentType} 
             players={tournament.players} 
             config={config} 
           />

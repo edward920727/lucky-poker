@@ -16,6 +16,7 @@ interface TournamentDashboardProps {
   players: Player[];
   onPlayersChange: (players: Player[]) => void;
   onBack: () => void;
+  onSave?: () => void;
 }
 
 export default function TournamentDashboard({
@@ -175,7 +176,6 @@ export default function TournamentDashboard({
               </span>
             </button>
             <ExportButton 
-              tournamentType={tournamentType} 
               players={players} 
               config={config}
               prizeCalculation={prizeCalculation}

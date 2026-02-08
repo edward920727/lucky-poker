@@ -39,14 +39,6 @@ export default function IndexPage({ onCreateNew, onViewTournament }: IndexPagePr
     return dateString.split('T')[0]; // 获取 YYYY-MM-DD 部分
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('zh-TW', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-  };
 
   const formatDateFull = (dateString: string) => {
     const date = new Date(dateString);
@@ -132,12 +124,6 @@ export default function IndexPage({ onCreateNew, onViewTournament }: IndexPagePr
     setExpandedDates(dates);
   };
 
-  // 获取所有可用日期（用于日期选择器）
-  const availableDates = useMemo(() => {
-    return Array.from(new Set(tournaments.map(t => getDateKey(t.date)))).sort((a, b) => 
-      new Date(b).getTime() - new Date(a).getTime()
-    );
-  }, [tournaments]);
 
   return (
     <div className="min-h-screen text-white relative bg-black">

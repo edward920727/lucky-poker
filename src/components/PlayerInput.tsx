@@ -9,7 +9,7 @@ interface PlayerInputProps {
   tournamentType: TournamentType;
 }
 
-export default function PlayerInput({ onAddPlayer, tournamentType }: PlayerInputProps) {
+export default function PlayerInput({ onAddPlayer }: PlayerInputProps) {
   const [memberId, setMemberId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [showKeyboard, setShowKeyboard] = useState(false);

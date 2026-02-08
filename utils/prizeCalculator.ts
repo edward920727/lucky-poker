@@ -86,7 +86,6 @@ export function calculatePrize(
 
   // 计算按筹码占比分配的总金额
   const chipBasedTotal = chipBasedPrizes.reduce((sum, p) => sum + p.amount, 0);
-  const chipBasedRemainder = totalPrizePool - chipBasedTotal;
 
   // 第二步：从总奖池中提拨前三名的奖金（按百分比）
   const topThreePrizes: TopThreePrize[] = [];
