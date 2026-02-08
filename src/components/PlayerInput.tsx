@@ -48,12 +48,22 @@ export default function PlayerInput({ onAddPlayer }: PlayerInputProps) {
           <label className="block text-sm font-medium mb-2">會編</label>
           <input
             type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={memberId}
-            onChange={(e) => handleMemberIdChange(e.target.value)}
-            onFocus={() => setShowKeyboard(true)}
-            placeholder="點擊輸入會編（數字）"
+            onChange={(e) => {
+              // 只允許數字輸入
+              const value = e.target.value.replace(/[^0-9]/g, '');
+              handleMemberIdChange(value);
+            }}
+            onFocus={() => {
+              // 只在移動設備上顯示虛擬鍵盤
+              if (window.matchMedia('(max-width: 768px)').matches || 'ontouchstart' in window) {
+                setShowKeyboard(true);
+              }
+            }}
+            placeholder="輸入會編（數字）"
             className="w-full px-4 py-3 bg-gray-700 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            readOnly
           />
           <p className="text-xs text-gray-400 mt-2">
             💡 提示：支付方式可在玩家列表中調整

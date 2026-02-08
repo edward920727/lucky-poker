@@ -93,12 +93,22 @@ export default function MemberPaymentQuery({ onClose }: MemberPaymentQueryProps)
           <div className="flex gap-2">
             <input
               type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={memberId}
-              onChange={(e) => setMemberId(e.target.value)}
-              onFocus={() => setShowKeyboard(true)}
-              placeholder="點擊輸入會編（數字）"
+              onChange={(e) => {
+                // 只允許數字輸入
+                const value = e.target.value.replace(/[^0-9]/g, '');
+                setMemberId(value);
+              }}
+              onFocus={() => {
+                // 只在移動設備上顯示虛擬鍵盤
+                if (window.matchMedia('(max-width: 768px)').matches || 'ontouchstart' in window) {
+                  setShowKeyboard(true);
+                }
+              }}
+              placeholder="輸入會編（數字）"
               className="flex-1 px-4 py-3 bg-gray-700 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              readOnly
             />
             <button
               onClick={handleSearch}

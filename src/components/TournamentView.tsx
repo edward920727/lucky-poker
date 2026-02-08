@@ -310,12 +310,22 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                 <div className="flex flex-col sm:flex-row gap-3">
                   <input
                     type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={newMemberId}
-                    onChange={(e) => setNewMemberId(e.target.value)}
-                    onFocus={() => setShowKeyboard(true)}
-                    placeholder="點擊輸入會編"
+                    onChange={(e) => {
+                      // 只允許數字輸入
+                      const value = e.target.value.replace(/[^0-9]/g, '');
+                      setNewMemberId(value);
+                    }}
+                    onFocus={() => {
+                      // 只在移動設備上顯示虛擬鍵盤
+                      if (window.matchMedia('(max-width: 768px)').matches || 'ontouchstart' in window) {
+                        setShowKeyboard(true);
+                      }
+                    }}
+                    placeholder="輸入會編（數字）"
                     className="flex-1 px-4 py-3 bg-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    readOnly
                   />
                   <button
                     onClick={handleAddPlayer}
