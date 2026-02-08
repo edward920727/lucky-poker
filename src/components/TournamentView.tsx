@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { TournamentRecord } from '../../types/tournament';
 import { getTournamentById, updateTournament } from '../../utils/storage';
 import { TOURNAMENT_TYPES, Player, PaymentMethod, PLAYER_HISTORY_DB } from '../../constants/pokerConfig';
@@ -7,6 +7,7 @@ import ExportButton from './ExportButton';
 import PlayerList from './PlayerList';
 import { logAction } from '../../utils/auditLog';
 import VirtualKeyboard from './VirtualKeyboard';
+import { calculatePrize, PrizeCalculationResult } from '../../utils/prizeCalculator';
 
 const paymentMethodLabels: Record<PaymentMethod, string> = {
   cash: '現金',
@@ -47,6 +48,38 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
     }
   }, [tournament, isEditMode]);
 
+  // 計算 displayPlayers（必須在所有 Hooks 中，在任何條件返回之前）
+  const displayPlayers = tournament 
+    ? (isEditMode ? editedPlayers : tournament.players)
+    : [];
+
+  // 計算獎金分配（使用賽事記錄中的總買入金額作為獎池）
+  // 注意：只在非編輯模式下計算，編輯模式下不計算獎金
+  // 必須在所有 Hooks 中，在任何條件返回之前
+  const prizeCalculation: PrizeCalculationResult | null = useMemo(() => {
+    // 編輯模式下不計算獎金
+    if (isEditMode) return null;
+    
+    if (!tournament || displayPlayers.length === 0) return null;
+    
+    // 使用賽事記錄中的 totalBuyIn 作為總獎池
+    const totalPrizePool = tournament.totalBuyIn || 0;
+    
+    // 如果沒有獎池，返回 null
+    if (totalPrizePool <= 0) return null;
+    
+    // 使用默認的前三名百分比 [15%, 10%, 5%]
+    const topThreePercentages: [number, number, number] = [15, 10, 5];
+    
+    try {
+      // 計算獎金分配
+      return calculatePrize(totalPrizePool, topThreePercentages, displayPlayers);
+    } catch (error) {
+      console.error('計算獎金時發生錯誤:', error);
+      return null;
+    }
+  }, [tournament, displayPlayers, isEditMode]);
+
   const handleSave = () => {
     if (!tournament) return;
 
@@ -69,16 +102,23 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
   };
 
   const handleEditMode = () => {
-    if (tournament) {
+    if (!tournament) {
+      console.error('無法進入編輯模式：tournament 為 null');
+      return;
+    }
+    
+    try {
       // 確保 editedPlayers 是最新的
-      const playersCopy = tournament.players.length > 0 
-        ? JSON.parse(JSON.stringify(tournament.players)) // 深拷貝
+      const players = tournament.players || [];
+      const playersCopy = players.length > 0 
+        ? JSON.parse(JSON.stringify(players)) // 深拷貝
         : [];
       console.log('進入編輯模式，players:', playersCopy);
       setEditedPlayers(playersCopy);
       setIsEditMode(true);
-    } else {
-      console.error('無法進入編輯模式：tournament 為 null');
+    } catch (error) {
+      console.error('進入編輯模式時發生錯誤:', error);
+      alert('進入編輯模式失敗，請重新整理頁面後再試');
     }
   };
 
@@ -141,6 +181,22 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
     setShowKeyboard(false);
   };
 
+  // 安全計算統計數據，避免空數組錯誤（必須在所有 Hooks 中）
+  const totalBuyInGroups = displayPlayers.length > 0 
+    ? displayPlayers.reduce((sum, p) => sum + (p.buyInCount || 0), 0)
+    : 0;
+  
+  const expectedTotalChips = tournament 
+    ? totalBuyInGroups * tournament.startChip 
+    : 0;
+  
+  const actualTotalChips = displayPlayers.length > 0
+    ? displayPlayers.reduce((sum, p) => sum + (p.currentChips || 0), 0)
+    : 0;
+  
+  const isBalanced = expectedTotalChips === actualTotalChips;
+
+  // 條件返回必須在所有 Hooks 之後
   if (!tournament) {
     return (
       <div className="min-h-screen p-4 md:p-6 bg-gray-900 text-white flex items-center justify-center">
@@ -158,11 +214,6 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
   }
 
   const config = TOURNAMENT_TYPES[tournament.tournamentType];
-  const displayPlayers = isEditMode ? editedPlayers : tournament.players;
-  const totalBuyInGroups = displayPlayers.reduce((sum, p) => sum + p.buyInCount, 0);
-  const expectedTotalChips = totalBuyInGroups * tournament.startChip;
-  const actualTotalChips = displayPlayers.reduce((sum, p) => sum + p.currentChips, 0);
-  const isBalanced = expectedTotalChips === actualTotalChips;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -210,7 +261,8 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                 <div className="w-full sm:w-auto">
                   <ExportButton 
                     players={tournament.players} 
-                    config={config} 
+                    config={config}
+                    prizeCalculation={prizeCalculation}
                   />
                 </div>
               </>
