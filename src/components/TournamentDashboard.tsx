@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TournamentType, Player, TOURNAMENT_TYPES, PLAYER_HISTORY_DB, PaymentMethod } from '../../constants/pokerConfig';
 import PlayerList from './PlayerList';
 import StatsPanel from './StatsPanel';
@@ -6,7 +6,7 @@ import PlayerInput from './PlayerInput';
 import ExportButton from './ExportButton';
 import PrizePoolCalculator from './PrizePoolCalculator';
 import FinancialStats from './FinancialStats';
-import { saveTournament } from '../../utils/storage';
+import { saveTournament, getAllTournaments } from '../../utils/storage';
 import { TournamentRecord } from '../../types/tournament';
 import { logAction } from '../../utils/auditLog';
 import { PrizeCalculationResult } from '../../utils/prizeCalculator';
@@ -32,6 +32,45 @@ export default function TournamentDashboard({
   const actualTotalChips = players.reduce((sum, p) => sum + p.currentChips, 0);
   const isBalanced = expectedTotalChips === actualTotalChips;
   const [prizeCalculation, setPrizeCalculation] = useState<PrizeCalculationResult | null>(null);
+  const [tournamentNumber, setTournamentNumber] = useState<number | null>(null);
+  const [showNumberInput, setShowNumberInput] = useState(false);
+
+  // 獲取今天的日期字符串 (YYYY-MM-DD)
+  const getTodayDateKey = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
+  // 自動計算當天同類型賽事的場次
+  useEffect(() => {
+    const todayKey = getTodayDateKey();
+    const allTournaments = getAllTournaments();
+    
+    // 獲取今天同類型的所有賽事
+    const todaySameTypeTournaments = allTournaments.filter(t => {
+      const tournamentDate = new Date(t.date).toISOString().split('T')[0];
+      return tournamentDate === todayKey && t.tournamentType === tournamentType;
+    });
+
+    // 從賽事名稱中提取場次號碼
+    const extractNumber = (name: string): number | null => {
+      const match = name.match(/#(\d+)$/);
+      return match ? parseInt(match[1]) : null;
+    };
+
+    // 找出已有的最大場次號碼
+    const existingNumbers = todaySameTypeTournaments
+      .map(t => extractNumber(t.tournamentName))
+      .filter((n): n is number => n !== null);
+
+    const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+    const nextNumber = maxNumber + 1;
+
+    // 如果沒有手動設置，使用自動計算的場次
+    if (tournamentNumber === null) {
+      setTournamentNumber(nextNumber);
+    }
+  }, [tournamentType, tournamentNumber]);
 
   const handleAddPlayer = (memberId: string, paymentMethod: PaymentMethod) => {
     // 檢查是否已存在
@@ -99,11 +138,17 @@ export default function TournamentDashboard({
       return sum + (p.buyInCount * entryFee);
     }, 0);
 
+    // 構建賽事名稱，如果設置了場次號碼，添加到名稱後面
+    let tournamentName: string = config.name;
+    if (tournamentNumber !== null && tournamentNumber > 0) {
+      tournamentName = `${config.name}#${tournamentNumber}`;
+    }
+
     const tournamentRecord: TournamentRecord = {
       id: Date.now().toString(),
       date: new Date().toISOString(),
       tournamentType,
-      tournamentName: config.name,
+      tournamentName: tournamentName as string,
       totalPlayers: totalBuyInGroups, // 改為買入組數
       totalBuyIn,
       players: [...players], // 深拷贝玩家数据
@@ -176,6 +221,49 @@ export default function TournamentDashboard({
                 <span className="whitespace-nowrap">保存賽事記錄</span>
               </span>
             </button>
+            
+            {/* 設置場次按鈕 */}
+            {!showNumberInput ? (
+              <button
+                onClick={() => setShowNumberInput(true)}
+                className={`px-4 md:px-6 py-3 rounded-xl text-base md:text-lg font-semibold transition-all duration-300 border-2 shadow-xl hover:shadow-2xl w-full sm:w-auto ${
+                  tournamentNumber !== null && tournamentNumber > 0
+                    ? 'bg-poker-gold-600 hover:bg-poker-gold-700 text-white border-poker-gold-500'
+                    : 'bg-gray-700 hover:bg-gray-600 text-white border-gray-600'
+                }`}
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <span>#</span>
+                  <span className="whitespace-nowrap">
+                    {tournamentNumber !== null && tournamentNumber > 0 
+                      ? `設置場次: #${tournamentNumber}` 
+                      : '設置場次'}
+                  </span>
+                </span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <input
+                  type="number"
+                  min="1"
+                  value={tournamentNumber || ''}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    setTournamentNumber(isNaN(value) || value < 1 ? null : value);
+                  }}
+                  placeholder="輸入場次號碼"
+                  className="flex-1 px-4 py-3 bg-gray-800 border-2 border-poker-gold-600 rounded-xl text-white text-base focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
+                  autoFocus
+                />
+                <button
+                  onClick={() => setShowNumberInput(false)}
+                  className="px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl text-base font-semibold transition-all duration-200 border-2 border-green-500"
+                >
+                  ✓
+                </button>
+              </div>
+            )}
+
             <div className="w-full sm:w-auto">
               <ExportButton 
                 players={players} 
