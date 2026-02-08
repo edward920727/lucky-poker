@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { TournamentRecord } from '../../types/tournament';
 import { getAllTournaments, deleteTournament } from '../../utils/storage';
 import AuditLogPanel from './AuditLogPanel';
+import MemberPaymentQuery from './MemberPaymentQuery';
 
 interface IndexPageProps {
   onCreateNew: () => void;
@@ -22,6 +23,7 @@ interface GroupedTournaments {
 export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onOpenUserManagement }: IndexPageProps) {
   const [tournaments, setTournaments] = useState<TournamentRecord[]>([]);
   const [showAuditLog, setShowAuditLog] = useState(false);
+  const [showMemberQuery, setShowMemberQuery] = useState(false);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
   const [filterDate, setFilterDate] = useState<string>('');
 
@@ -194,7 +196,7 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
         </div>
 
         {/* 主功能區 */}
-        <div className="mb-8 flex flex-col md:flex-row justify-center items-center gap-4">
+        <div className="mb-8 flex flex-col md:flex-row justify-center items-center gap-4 flex-wrap">
           <button
             onClick={onCreateNew}
             className="group relative bg-white hover:bg-gray-100 text-black font-bold py-6 px-12 rounded-2xl text-2xl md:text-3xl shadow-2xl transform hover:scale-105 transition-all duration-300 flex items-center gap-4 overflow-hidden border-2 border-white"
@@ -202,6 +204,13 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-200 to-transparent opacity-0 group-hover:opacity-30 transform -skew-x-12 group-hover:translate-x-full transition-all duration-1000"></div>
             <span className="text-4xl relative z-10">🃏</span>
             <span className="relative z-10">創建新賽事</span>
+          </button>
+          <button
+            onClick={() => setShowMemberQuery(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-xl transition-all duration-200 border-2 border-blue-500 flex items-center gap-2"
+          >
+            <span>🔍</span>
+            <span>會員查詢</span>
           </button>
           <button
             onClick={() => setShowAuditLog(true)}
@@ -404,6 +413,11 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
       {/* 操作日誌面板 */}
       {showAuditLog && (
         <AuditLogPanel onClose={() => setShowAuditLog(false)} />
+      )}
+
+      {/* 會員查詢面板 */}
+      {showMemberQuery && (
+        <MemberPaymentQuery onClose={() => setShowMemberQuery(false)} />
       )}
     </div>
   );
