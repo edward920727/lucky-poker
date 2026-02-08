@@ -269,6 +269,9 @@ export default function TournamentDashboard({
                 players={players} 
                 config={config}
                 prizeCalculation={prizeCalculation}
+                tournamentName={tournamentNumber !== null && tournamentNumber > 0 
+                  ? `${config.name}#${tournamentNumber}` 
+                  : undefined}
               />
             </div>
           </div>

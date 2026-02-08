@@ -263,6 +263,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                     players={tournament.players} 
                     config={config}
                     prizeCalculation={prizeCalculation}
+                    tournamentName={tournament.tournamentName}
                   />
                 </div>
               </>

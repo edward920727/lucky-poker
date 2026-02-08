@@ -7,9 +7,10 @@ interface ExportButtonProps {
   players: Player[];
   config: { name: string; startChip: number };
   prizeCalculation?: PrizeCalculationResult | null;
+  tournamentName?: string; // 完整的賽事名稱（包含場次號碼，如 "600#1"）
 }
 
-export default function ExportButton({ players, config, prizeCalculation }: ExportButtonProps) {
+export default function ExportButton({ players, config, prizeCalculation, tournamentName }: ExportButtonProps) {
   const exportRef = useRef<HTMLDivElement>(null);
 
   const handleExport = async () => {
@@ -51,7 +52,9 @@ export default function ExportButton({ players, config, prizeCalculation }: Expo
       {/* 隱藏的導出內容 */}
       <div ref={exportRef} className="fixed -left-[9999px] bg-gray-900 text-white p-8 w-[800px]">
         <div className="text-center mb-6">
-          <h1 className="text-4xl font-bold mb-2">{config.name}</h1>
+          <h1 className="text-4xl font-bold mb-2">
+            {tournamentName || config.name}
+          </h1>
           <p className="text-xl text-gray-400">
             結算結存表 | {new Date().toLocaleDateString('zh-TW')}
           </p>
