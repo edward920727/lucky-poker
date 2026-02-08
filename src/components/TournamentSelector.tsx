@@ -55,12 +55,12 @@ export default function TournamentSelector({ onSelect, onBack }: TournamentSelec
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl relative z-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 w-full max-w-5xl relative z-10 px-4">
         {Object.entries(TOURNAMENT_TYPES).map(([type, config], index) => (
           <button
             key={type}
             onClick={() => onSelect(type as TournamentType)}
-            className="group relative bg-white hover:bg-gray-100 rounded-2xl p-8 shadow-2xl shadow-white/20 hover:shadow-white/50 transform hover:scale-105 transition-all duration-300 text-left border-2 border-white overflow-hidden"
+            className="group relative bg-white hover:bg-gray-100 rounded-2xl p-6 md:p-8 shadow-2xl shadow-white/20 hover:shadow-white/50 transform hover:scale-105 transition-all duration-300 text-left border-2 border-white overflow-hidden min-h-[140px]"
           >
             {/* 背景光效 */}
             <div className="absolute inset-0 bg-gradient-to-br from-poker-gold-500/0 via-poker-gold-500/20 to-poker-gold-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

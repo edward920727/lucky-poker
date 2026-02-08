@@ -32,7 +32,7 @@ export default function FinancialStats({ players, tournamentType }: FinancialSta
       </div>
       
       {/* 支付方式統計 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
         <div className="relative bg-gradient-to-br from-green-600 to-green-800 p-4 rounded-xl shadow-xl border-2 border-green-500 border-opacity-50 overflow-hidden group">
           <div className="absolute top-0 right-0 w-20 h-20 bg-white opacity-5 transform rotate-45 translate-x-10 -translate-y-10"></div>
           <div className="relative z-10">
@@ -64,7 +64,7 @@ export default function FinancialStats({ players, tournamentType }: FinancialSta
       </div>
 
       {/* 總計 */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-6">
         <div className="relative bg-gradient-to-br from-gray-700 to-gray-800 p-4 rounded-xl shadow-lg border-2 border-gray-600 overflow-hidden">
           <div className="absolute top-0 right-0 w-16 h-16 bg-white opacity-5 transform rotate-45 translate-x-8 -translate-y-8"></div>
           <div className="relative z-10">

@@ -191,23 +191,25 @@ export default function IndexPage({ onCreateNew, onViewTournament }: IndexPagePr
             <h2 className="text-2xl md:text-3xl font-bold">賽事記錄</h2>
             
             {/* 日期篩選器 */}
-            <div className="flex items-center gap-3">
-              <label className="text-sm font-semibold text-poker-gold-300">快速跳轉日期：</label>
-              <input
-                type="date"
-                value={filterDate}
-                onChange={handleDateFilterChange}
-                max={new Date().toISOString().split('T')[0]}
-                className="px-4 py-2 bg-gray-900 border-2 border-poker-gold-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-poker-gold-500 focus:border-poker-gold-400 transition-all"
-              />
-              {filterDate && (
-                <button
-                  onClick={clearDateFilter}
-                  className="px-4 py-2 bg-white hover:bg-gray-100 rounded-lg text-sm font-semibold text-black transition-all duration-200 border-2 border-white shadow-lg"
-                >
-                  ✕ 清除
-                </button>
-              )}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+              <label className="text-sm font-semibold text-poker-gold-300 whitespace-nowrap">快速跳轉日期：</label>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <input
+                  type="date"
+                  value={filterDate}
+                  onChange={handleDateFilterChange}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="flex-1 sm:flex-none px-3 md:px-4 py-2 bg-gray-900 border-2 border-poker-gold-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-poker-gold-500 focus:border-poker-gold-400 transition-all"
+                />
+                {filterDate && (
+                  <button
+                    onClick={clearDateFilter}
+                    className="px-3 md:px-4 py-2 bg-white hover:bg-gray-100 rounded-lg text-sm font-semibold text-black transition-all duration-200 border-2 border-white shadow-lg whitespace-nowrap"
+                  >
+                    ✕ 清除
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           
@@ -246,7 +248,7 @@ export default function IndexPage({ onCreateNew, onViewTournament }: IndexPagePr
                             {group.tournaments.length} 場賽事
                           </span>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mt-3">
                           <div className="bg-gradient-to-br from-blue-600 to-blue-800 bg-opacity-40 px-4 py-3 rounded-xl border border-blue-500 border-opacity-50 shadow-lg">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-lg">👥</span>
@@ -326,7 +328,7 @@ export default function IndexPage({ onCreateNew, onViewTournament }: IndexPagePr
                                     })}
                                   </span>
                                 </div>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                                   <div className="bg-blue-600 bg-opacity-20 px-3 py-2 rounded-lg border border-blue-500 border-opacity-30">
                                     <p className="text-xs text-blue-300 mb-1 font-medium">參賽人數</p>
                                     <p className="text-base font-bold text-blue-200">{tournament.totalPlayers} 人</p>

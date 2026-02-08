@@ -53,7 +53,7 @@ export default function PrizePoolCalculator({ players, onCalculationChange }: Pr
       </div>
 
       {/* 輸入區域 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-6">
         <div>
           <label className="block text-sm font-medium mb-2">報名費 (NT$)</label>
           <input
@@ -103,11 +103,11 @@ export default function PrizePoolCalculator({ players, onCalculationChange }: Pr
           {[1, 2, 3].map((rank) => {
             const prize = topThreePrizes.find(p => p.rank === rank);
             return (
-              <div key={rank} className="flex items-center gap-4 bg-gray-700 p-4 rounded-lg">
-                <div className="w-16 text-center">
-                  <span className="text-lg font-bold text-yellow-400">第 {rank} 名</span>
+              <div key={rank} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 md:gap-4 bg-gray-700 p-4 rounded-lg">
+                <div className="w-full sm:w-20 text-center sm:text-left">
+                  <span className="text-base md:text-lg font-bold text-yellow-400">第 {rank} 名</span>
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 w-full">
                   <label className="block text-sm text-gray-400 mb-1">獎池百分比 (%)</label>
                   <input
                     type="number"
@@ -119,7 +119,7 @@ export default function PrizePoolCalculator({ players, onCalculationChange }: Pr
                     className="w-full px-3 py-2 bg-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                <div className="w-40">
+                <div className="w-full sm:w-40">
                   <label className="block text-sm text-gray-400 mb-1">獎金金額</label>
                   <div className="px-3 py-2 bg-gray-600 rounded-lg text-right font-semibold">
                     NT$ {prize ? prize.amount.toLocaleString() : 0}
@@ -128,7 +128,7 @@ export default function PrizePoolCalculator({ players, onCalculationChange }: Pr
                     (四捨五入至百位)
                   </div>
                   {rank === 1 && Math.abs(adjustmentAmount) >= 0.01 && (
-                    <div className="text-xs text-yellow-400 mt-1 text-right">
+                    <div className="text-xs text-yellow-400 mt-1 text-right break-words">
                       (含調整差額 {adjustmentAmount > 0 ? '+' : ''}{adjustmentAmount.toLocaleString()})
                     </div>
                   )}

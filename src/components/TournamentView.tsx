@@ -50,7 +50,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
     <div className="min-h-screen p-4 md:p-6 bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto">
         {/* 標題列 */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
             <button
               onClick={onBack}
@@ -68,10 +68,12 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
               起始碼量: {tournament.startChip.toLocaleString()}
             </p>
           </div>
-          <ExportButton 
-            players={tournament.players} 
-            config={config} 
-          />
+          <div className="w-full md:w-auto">
+            <ExportButton 
+              players={tournament.players} 
+              config={config} 
+            />
+          </div>
         </div>
 
         {/* 統計面板 */}
@@ -83,10 +85,31 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
         />
 
         {/* 玩家列表（只读模式） */}
-        <div className="bg-gray-800 rounded-lg p-6">
-          <h2 className="text-2xl font-bold mb-4">玩家列表</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
+        <div className="bg-gray-800 rounded-lg p-4 md:p-6">
+          <h2 className="text-xl md:text-2xl font-bold mb-4">玩家列表</h2>
+          
+          {/* 手機版：卡片式佈局 */}
+          <div className="md:hidden space-y-3">
+            {tournament.players.map((player) => (
+              <div key={player.id} className="bg-gray-700 rounded-lg p-4 border border-gray-600">
+                <div className="font-mono font-bold text-lg text-poker-gold-300 mb-2">{player.memberId}</div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-400">買入次數：</span>
+                    <span className="font-semibold">{player.buyInCount}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">當前碼量：</span>
+                    <span className="font-semibold">{player.currentChips.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* 桌面版：表格佈局 */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full min-w-[400px]">
               <thead>
                 <tr className="border-b border-gray-700">
                   <th className="text-left py-3 px-4">會編</th>

@@ -43,7 +43,7 @@ export default function ExportButton({ players, config, prizeCalculation }: Expo
     <>
       <button
         onClick={handleExport}
-        className="px-6 py-3 bg-white hover:bg-gray-100 rounded-lg text-lg font-semibold text-black transition-all duration-200 mb-4 md:mb-0 border-2 border-white"
+        className="w-full sm:w-auto px-4 md:px-6 py-3 bg-white hover:bg-gray-100 rounded-lg text-base md:text-lg font-semibold text-black transition-all duration-200 border-2 border-white"
       >
         📥 導出結算結存表
       </button>

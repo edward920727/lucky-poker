@@ -152,34 +152,36 @@ export default function TournamentDashboard({
                   {config.name}
                 </h1>
               </div>
-              <div className="flex items-center gap-4 mt-2">
-                <div className="flex items-center gap-2 bg-poker-gold-900 bg-opacity-50 px-4 py-2 rounded-lg border border-poker-gold-600">
-                  <span className="text-lg">🪙</span>
-                  <span className="text-poker-gold-300 font-semibold">起始碼: {config.startChip.toLocaleString()}</span>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mt-2">
+                <div className="flex items-center gap-2 bg-poker-gold-900 bg-opacity-50 px-3 md:px-4 py-2 rounded-lg border border-poker-gold-600">
+                  <span className="text-base md:text-lg">🪙</span>
+                  <span className="text-poker-gold-300 font-semibold text-sm md:text-base">起始碼: {config.startChip.toLocaleString()}</span>
                 </div>
-                <div className="flex items-center gap-2 bg-poker-gold-900 bg-opacity-50 px-4 py-2 rounded-lg border border-poker-gold-600">
-                  <span className="text-lg">💰</span>
-                  <span className="text-poker-gold-300 font-semibold">參賽費: NT$ {tournamentType}</span>
+                <div className="flex items-center gap-2 bg-poker-gold-900 bg-opacity-50 px-3 md:px-4 py-2 rounded-lg border border-poker-gold-600">
+                  <span className="text-base md:text-lg">💰</span>
+                  <span className="text-poker-gold-300 font-semibold text-sm md:text-base">參賽費: NT$ {tournamentType}</span>
                 </div>
               </div>
             </div>
           </div>
-          <div className="flex flex-col md:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 mt-4 md:mt-0">
             <button
               onClick={handleSaveTournament}
-              className="group relative px-6 py-3 bg-white hover:bg-gray-100 rounded-xl text-lg font-semibold text-black transition-all duration-300 mb-4 md:mb-0 border-2 border-white shadow-xl hover:shadow-2xl overflow-hidden"
+              className="group relative px-4 md:px-6 py-3 bg-white hover:bg-gray-100 rounded-xl text-base md:text-lg font-semibold text-black transition-all duration-300 border-2 border-white shadow-xl hover:shadow-2xl overflow-hidden w-full sm:w-auto"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-200 to-transparent opacity-0 group-hover:opacity-30 transform -skew-x-12 group-hover:translate-x-full transition-all duration-1000"></div>
-              <span className="relative z-10 flex items-center gap-2">
+              <span className="relative z-10 flex items-center justify-center gap-2">
                 <span>💾</span>
-                <span>保存賽事記錄</span>
+                <span className="whitespace-nowrap">保存賽事記錄</span>
               </span>
             </button>
-            <ExportButton 
-              players={players} 
-              config={config}
-              prizeCalculation={prizeCalculation}
-            />
+            <div className="w-full sm:w-auto">
+              <ExportButton 
+                players={players} 
+                config={config}
+                prizeCalculation={prizeCalculation}
+              />
+            </div>
           </div>
         </div>
 

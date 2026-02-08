@@ -24,8 +24,8 @@ export default function VirtualKeyboard({ value, onChange, onClose }: VirtualKey
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-t-2xl w-full max-w-md p-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50 p-2 md:p-4">
+      <div className="bg-gray-800 rounded-t-2xl w-full max-w-md p-4 md:p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-bold">輸入會編</h3>
           <button
@@ -42,46 +42,46 @@ export default function VirtualKeyboard({ value, onChange, onClose }: VirtualKey
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mb-3">
+        <div className="grid grid-cols-3 gap-2 md:gap-3 mb-2 md:mb-3">
           {numberKeys.map((row) =>
             row.map((key) => (
               <button
                 key={key}
                 onClick={() => handleKeyPress(key)}
-                className="py-4 bg-white hover:bg-gray-100 active:bg-gray-200 rounded-lg text-xl font-semibold text-black border-2 border-white transition-all duration-200"
+                className="py-3 md:py-4 bg-white hover:bg-gray-100 active:bg-gray-200 rounded-lg text-lg md:text-xl font-semibold text-black border-2 border-white transition-all duration-200 min-h-[48px]"
               >
                 {key}
               </button>
             ))
           )}
         </div>
-        <div className="grid grid-cols-3 gap-3 mb-3">
+        <div className="grid grid-cols-3 gap-2 md:gap-3 mb-2 md:mb-3">
           <div className="col-span-1"></div>
           <button
             onClick={() => handleKeyPress('0')}
-            className="py-4 bg-white hover:bg-gray-100 active:bg-gray-200 rounded-lg text-xl font-semibold text-black border-2 border-white transition-all duration-200"
+            className="py-3 md:py-4 bg-white hover:bg-gray-100 active:bg-gray-200 rounded-lg text-lg md:text-xl font-semibold text-black border-2 border-white transition-all duration-200 min-h-[48px]"
           >
             0
           </button>
           <div className="col-span-1"></div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2 md:gap-3">
           <button
             onClick={() => handleKeyPress('backspace')}
-            className="py-4 bg-white hover:bg-gray-100 active:bg-gray-200 rounded-lg text-lg font-semibold text-black border-2 border-white transition-all duration-200"
+            className="py-3 md:py-4 bg-white hover:bg-gray-100 active:bg-gray-200 rounded-lg text-sm md:text-lg font-semibold text-black border-2 border-white transition-all duration-200 min-h-[48px]"
           >
             ← 刪除
           </button>
           <button
             onClick={() => handleKeyPress('clear')}
-            className="py-4 bg-white hover:bg-gray-100 active:bg-gray-200 rounded-lg text-lg font-semibold text-black border-2 border-white transition-all duration-200"
+            className="py-3 md:py-4 bg-white hover:bg-gray-100 active:bg-gray-200 rounded-lg text-sm md:text-lg font-semibold text-black border-2 border-white transition-all duration-200 min-h-[48px]"
           >
             清除
           </button>
           <button
             onClick={() => handleKeyPress('enter')}
-            className="py-4 bg-white hover:bg-gray-100 active:bg-gray-200 rounded-lg text-lg font-semibold text-black border-2 border-white transition-all duration-200"
+            className="py-3 md:py-4 bg-white hover:bg-gray-100 active:bg-gray-200 rounded-lg text-sm md:text-lg font-semibold text-black border-2 border-white transition-all duration-200 min-h-[48px]"
           >
             確認
           </button>

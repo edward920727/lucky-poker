@@ -66,7 +66,7 @@ export default function PlayerInput({ onAddPlayer }: PlayerInputProps) {
         </div>
         <div>
           <label className="block text-sm font-medium mb-2">支付方式</label>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {(['cash', 'transfer', 'points', 'unpaid'] as PaymentMethod[]).map((method) => (
               <button
                 key={method}
