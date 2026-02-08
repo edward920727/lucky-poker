@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import html2canvas from 'html2canvas';
 import { Player } from '../../constants/pokerConfig';
 import { PrizeCalculationResult } from '../../utils/prizeCalculator';
+import { getTaiwanTodayDateKey, formatTaiwanDate, getTaiwanDateTime } from '../utils/dateUtils';
 
 interface ExportButtonProps {
   players: Player[];
@@ -23,7 +24,7 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
       });
 
       const link = document.createElement('a');
-      link.download = `${config.name}_結算結存表_${new Date().toISOString().split('T')[0]}.png`;
+      link.download = `${config.name}_結算結存表_${getTaiwanTodayDateKey()}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     } catch (error) {
@@ -56,7 +57,7 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
             {tournamentName || config.name}
           </h1>
           <p className="text-xl text-gray-400">
-            結算結存表 | {new Date().toLocaleDateString('zh-TW')}
+            結算結存表 | {formatTaiwanDate(getTaiwanDateTime(), { year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
 

@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { TournamentRecord } from '../../types/tournament';
 import { getAllTournaments, deleteTournament, setupRealtimeSyncForTournaments } from '../../utils/storage';
+import { getDateKey, formatTaiwanDate, getTaiwanTodayDateKey, formatTaiwanTime } from '../utils/dateUtils';
 
 interface AllTournamentsViewProps {
   onBack: () => void;
@@ -51,13 +52,8 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
     setExpandedDates(dates);
   };
 
-  const getDateKey = (dateString: string): string => {
-    return dateString.split('T')[0]; // 获取 YYYY-MM-DD 部分
-  };
-
   const formatDateFull = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('zh-TW', {
+    return formatTaiwanDate(dateString, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -155,9 +151,24 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
 
   // 快捷日期範圍設置
   const setDateRange = (range: 'today' | 'week' | 'month' | 'year' | 'all') => {
+    // 使用台灣時區獲取今天的日期字符串（YYYY-MM-DD）
+    const todayStr = getTaiwanTodayDateKey();
+    
+    // 獲取台灣時區的當前日期對象
     const now = new Date();
-    // 使用本地時區獲取今天的日期字符串（YYYY-MM-DD）
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const formatter = new Intl.DateTimeFormat('zh-TW', {
+      timeZone: 'Asia/Taipei',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const parts = formatter.formatToParts(now);
+    const year = parseInt(parts.find(p => p.type === 'year')?.value || '0');
+    const month = parseInt(parts.find(p => p.type === 'month')?.value || '0');
+    const day = parseInt(parts.find(p => p.type === 'day')?.value || '0');
+    
+    // 創建台灣時區的日期對象（用於計算）
+    const taiwanNow = new Date(year, month - 1, day);
     
     switch (range) {
       case 'today':
@@ -167,9 +178,9 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
         break;
       case 'week':
         // 計算本週第一天（週日）
-        const dayOfWeek = now.getDay(); // 0=週日, 1=週一, ..., 6=週六
-        const weekStartDate = new Date(now);
-        weekStartDate.setDate(now.getDate() - dayOfWeek);
+        const dayOfWeek = taiwanNow.getDay(); // 0=週日, 1=週一, ..., 6=週六
+        const weekStartDate = new Date(taiwanNow);
+        weekStartDate.setDate(taiwanNow.getDate() - dayOfWeek);
         const weekStartStr = `${weekStartDate.getFullYear()}-${String(weekStartDate.getMonth() + 1).padStart(2, '0')}-${String(weekStartDate.getDate()).padStart(2, '0')}`;
         setStartDate(weekStartStr);
         setEndDate(todayStr);
@@ -185,13 +196,13 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
         break;
       case 'month':
         // 本月第一天
-        const monthStartStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        const monthStartStr = `${year}-${String(month).padStart(2, '0')}-01`;
         setStartDate(monthStartStr);
         setEndDate(todayStr);
         break;
       case 'year':
         // 今年第一天
-        const yearStartStr = `${now.getFullYear()}-01-01`;
+        const yearStartStr = `${year}-01-01`;
         setStartDate(yearStartStr);
         setEndDate(todayStr);
         break;
@@ -372,7 +383,7 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                     min={startDate}
-                    max={new Date().toISOString().split('T')[0]}
+                    max={getTaiwanTodayDateKey()}
                     className="flex-1 px-4 py-2 bg-gray-900 border-2 border-poker-gold-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-poker-gold-500 focus:border-poker-gold-400 transition-all"
                   />
                 </div>
@@ -489,7 +500,7 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
                                     {tournament.tournamentName}
                                   </h4>
                                   <span className="text-xs text-poker-gold-200 bg-poker-gold-900 bg-opacity-50 px-3 py-1 rounded-full border border-poker-gold-600 font-medium">
-                                    🕐 {new Date(tournament.date).toLocaleTimeString('zh-TW', {
+                                    🕐 {formatTaiwanTime(tournament.date, {
                                       hour: '2-digit',
                                       minute: '2-digit',
                                     })}

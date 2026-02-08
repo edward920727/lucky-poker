@@ -8,6 +8,7 @@ import PrizePoolCalculator from './PrizePoolCalculator';
 import FinancialStats from './FinancialStats';
 import { saveTournament, getAllTournaments } from '../../utils/storage';
 import { TournamentRecord } from '../../types/tournament';
+import { getTaiwanDateTime, getTaiwanTodayDateKey, getDateKey } from '../utils/dateUtils';
 import { logAction } from '../../utils/auditLog';
 import { PrizeCalculationResult } from '../../utils/prizeCalculator';
 
@@ -35,20 +36,14 @@ export default function TournamentDashboard({
   const [tournamentNumber, setTournamentNumber] = useState<number | null>(null);
   const [showNumberInput, setShowNumberInput] = useState(false);
 
-  // 獲取今天的日期字符串 (YYYY-MM-DD)
-  const getTodayDateKey = () => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  };
-
   // 自動計算當天同類型賽事的場次
   useEffect(() => {
-    const todayKey = getTodayDateKey();
+    const todayKey = getTaiwanTodayDateKey();
     const allTournaments = getAllTournaments();
     
-    // 獲取今天同類型的所有賽事
+    // 獲取今天同類型的所有賽事（使用台灣時區）
     const todaySameTypeTournaments = allTournaments.filter(t => {
-      const tournamentDate = new Date(t.date).toISOString().split('T')[0];
+      const tournamentDate = getDateKey(t.date);
       return tournamentDate === todayKey && t.tournamentType === tournamentType;
     });
 
@@ -144,9 +139,12 @@ export default function TournamentDashboard({
       tournamentName = `${config.name}#${tournamentNumber}`;
     }
 
+    // 使用台灣時區生成日期字符串
+    const taiwanDateTime = getTaiwanDateTime();
+
     const tournamentRecord: TournamentRecord = {
       id: Date.now().toString(),
-      date: new Date().toISOString(),
+      date: taiwanDateTime,
       tournamentType,
       tournamentName: tournamentName as string,
       totalPlayers: totalBuyInGroups, // 改為買入組數

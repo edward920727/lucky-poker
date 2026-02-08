@@ -3,6 +3,7 @@ import { getAllTournaments } from '../../utils/storage';
 import { TournamentRecord } from '../../types/tournament';
 import { Player } from '../../constants/pokerConfig';
 import VirtualKeyboard from './VirtualKeyboard';
+import { formatTaiwanDate } from '../utils/dateUtils';
 
 interface MemberPaymentQueryProps {
   onClose: () => void;
@@ -59,8 +60,7 @@ export default function MemberPaymentQuery({ onClose }: MemberPaymentQueryProps)
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('zh-TW', {
+    return formatTaiwanDate(dateString, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',

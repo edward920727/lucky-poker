@@ -3,6 +3,7 @@ import { TournamentRecord } from '../../types/tournament';
 import { getAllTournaments, deleteTournament, setupRealtimeSyncForTournaments } from '../../utils/storage';
 import AuditLogPanel from './AuditLogPanel';
 import MemberPaymentQuery from './MemberPaymentQuery';
+import { getTaiwanTodayDateKey, getDateKey, formatTaiwanDate, getTaiwanDateTime, formatTaiwanTime } from '../utils/dateUtils';
 
 interface IndexPageProps {
   onCreateNew: () => void;
@@ -27,26 +28,6 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
   const [showMemberQuery, setShowMemberQuery] = useState(false);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    loadTournaments();
-    
-    // 設置實時同步（當其他設備更新數據時自動刷新）
-    try {
-      const unsubscribe = setupRealtimeSyncForTournaments((tournaments) => {
-        setTournaments(tournaments);
-        // 更新展開的日期
-        const dates = new Set(tournaments.map(t => getDateKey(t.date)));
-        setExpandedDates(dates);
-      });
-      
-      return () => {
-        if (unsubscribe) unsubscribe();
-      };
-    } catch (error) {
-      console.warn('實時同步設置失敗（將使用本地存儲）:', error);
-    }
-  }, []);
-
   const loadTournaments = () => {
     const records = getAllTournaments();
     setTournaments(records);
@@ -55,14 +36,60 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
     setExpandedDates(dates);
   };
 
-  const getDateKey = (dateString: string): string => {
-    return dateString.split('T')[0]; // 获取 YYYY-MM-DD 部分
-  };
-
+  useEffect(() => {
+    loadTournaments();
+    
+    // 設置實時同步（當其他設備更新數據時自動刷新）
+    let unsubscribe: (() => void) | null = null;
+    try {
+      unsubscribe = setupRealtimeSyncForTournaments((tournaments) => {
+        console.log('[實時同步] 收到更新，賽事數量:', tournaments.length);
+        setTournaments(tournaments);
+        // 更新展開的日期
+        const dates = new Set(tournaments.map(t => getDateKey(t.date)));
+        setExpandedDates(dates);
+      });
+    } catch (error) {
+      console.warn('實時同步設置失敗（將使用本地存儲）:', error);
+    }
+    
+    // 監聽 storage 事件（當本地存儲更新時，用於跨標籤頁同步）
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'lucky_poker_tournaments') {
+        console.log('[本地存儲更新] 檢測到賽事數據變化，重新載入');
+        loadTournaments();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // 定期檢查本地存儲（用於同一個標籤頁內的更新）
+    let lastTournamentCount = getAllTournaments().length;
+    const intervalId = setInterval(() => {
+      const currentData = localStorage.getItem('lucky_poker_tournaments');
+      if (currentData) {
+        try {
+          const currentTournaments = JSON.parse(currentData);
+          if (currentTournaments.length !== lastTournamentCount) {
+            console.log('[定期檢查] 檢測到賽事數據變化，重新載入');
+            lastTournamentCount = currentTournaments.length;
+            loadTournaments();
+          }
+        } catch (e) {
+          // 忽略解析錯誤
+        }
+      }
+    }, 1000); // 每秒檢查一次
+    
+    return () => {
+      if (unsubscribe) unsubscribe();
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(intervalId);
+    };
+  }, []);
 
   const formatDateFull = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('zh-TW', {
+    return formatTaiwanDate(dateString, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -74,22 +101,31 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
     return `NT$ ${amount.toLocaleString()}`;
   };
 
-  // 獲取今天的日期字符串 (YYYY-MM-DD)
-  const getTodayDateKey = () => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  };
-
   // 按日期分组并计算统计（只顯示今天的）
   const groupedTournaments = useMemo(() => {
     const grouped: Record<string, GroupedTournaments> = {};
-    const todayKey = getTodayDateKey();
+    const todayKey = getTaiwanTodayDateKey();
+    
+    // 調試：顯示今天的日期和所有賽事
+    console.log(`[今日賽事篩選] 今天的日期鍵: "${todayKey}"`);
+    console.log(`[今日賽事篩選] 總共有 ${tournaments.length} 個賽事`);
+    
+    // 顯示所有賽事的日期（前5個）
+    tournaments.slice(0, 5).forEach((t, idx) => {
+      const dk = getDateKey(t.date);
+      console.log(`[今日賽事篩選] 賽事 ${idx + 1}: 日期鍵="${dk}", 完整日期="${t.date}", 名稱="${t.tournamentName}"`);
+    });
 
     tournaments.forEach((tournament) => {
       const dateKey = getDateKey(tournament.date);
       
-      // 只處理今天的賽事
-      if (dateKey !== todayKey) return;
+      // 只處理今天的賽事（使用字符串直接比較，避免時區問題）
+      if (dateKey !== todayKey) {
+        return;
+      }
+      
+      // 調試：匹配成功
+      console.log(`[今日賽事篩選] ✓ 匹配成功: ${tournament.tournamentName}, 日期=${dateKey}`);
       
       if (!grouped[dateKey]) {
         grouped[dateKey] = {
@@ -248,7 +284,7 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
         <div className="bg-black bg-opacity-80 rounded-3xl p-6 backdrop-blur-md border-2 border-poker-gold-600 border-opacity-50 shadow-2xl shadow-poker-gold-500/20">
           <div className="mb-6">
             <h2 className="text-2xl md:text-3xl font-bold">今日賽事記錄</h2>
-            <p className="text-sm text-gray-400 mt-2">顯示 {new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })} 的賽事</p>
+            <p className="text-sm text-gray-400 mt-2">顯示 {formatTaiwanDate(getTaiwanDateTime(), { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })} 的賽事</p>
           </div>
           
           {filteredGroups.length === 0 ? (
@@ -360,7 +396,7 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
                                     {tournament.tournamentName}
                                   </h4>
                                   <span className="text-xs text-poker-gold-200 bg-poker-gold-900 bg-opacity-50 px-3 py-1 rounded-full border border-poker-gold-600 font-medium">
-                                    🕐 {new Date(tournament.date).toLocaleTimeString('zh-TW', {
+                                    🕐 {formatTaiwanTime(tournament.date, {
                                       hour: '2-digit',
                                       minute: '2-digit',
                                     })}

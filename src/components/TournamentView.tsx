@@ -8,6 +8,7 @@ import PlayerList from './PlayerList';
 import { logAction } from '../../utils/auditLog';
 import VirtualKeyboard from './VirtualKeyboard';
 import { calculatePrize, PrizeCalculationResult } from '../../utils/prizeCalculator';
+import { formatTaiwanDate, formatTaiwanTime } from '../utils/dateUtils';
 
 const paymentMethodLabels: Record<PaymentMethod, string> = {
   cash: '現金',
@@ -216,14 +217,16 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
   const config = TOURNAMENT_TYPES[tournament.tournamentType];
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('zh-TW', {
+    const dateStr = formatTaiwanDate(dateString, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
+    });
+    const timeStr = formatTaiwanTime(dateString, {
       hour: '2-digit',
       minute: '2-digit',
     });
+    return `${dateStr} ${timeStr}`;
   };
 
   return (
