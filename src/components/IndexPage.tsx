@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { TournamentRecord } from '../../types/tournament';
-import { getAllTournaments, deleteTournament } from '../../utils/storage';
+import { getAllTournaments, deleteTournament, setupRealtimeSyncForTournaments } from '../../utils/storage';
 import AuditLogPanel from './AuditLogPanel';
 import MemberPaymentQuery from './MemberPaymentQuery';
 
@@ -29,6 +29,22 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
 
   useEffect(() => {
     loadTournaments();
+    
+    // 設置實時同步（當其他設備更新數據時自動刷新）
+    try {
+      const unsubscribe = setupRealtimeSyncForTournaments((tournaments) => {
+        setTournaments(tournaments);
+        // 更新展開的日期
+        const dates = new Set(tournaments.map(t => getDateKey(t.date)));
+        setExpandedDates(dates);
+      });
+      
+      return () => {
+        if (unsubscribe) unsubscribe();
+      };
+    } catch (error) {
+      console.warn('實時同步設置失敗（將使用本地存儲）:', error);
+    }
   }, []);
 
   const loadTournaments = () => {

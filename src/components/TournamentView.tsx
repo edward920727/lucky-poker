@@ -1,11 +1,23 @@
 import { useEffect, useState } from 'react';
 import { TournamentRecord } from '../../types/tournament';
 import { getTournamentById, updateTournament } from '../../utils/storage';
-import { TOURNAMENT_TYPES, Player } from '../../constants/pokerConfig';
+import { TOURNAMENT_TYPES, Player, PaymentMethod } from '../../constants/pokerConfig';
 import StatsPanel from './StatsPanel';
 import ExportButton from './ExportButton';
 import PlayerList from './PlayerList';
 import { logAction } from '../../utils/auditLog';
+
+const paymentMethodLabels: Record<PaymentMethod, string> = {
+  cash: '現金',
+  transfer: '轉帳',
+  unpaid: '未付',
+};
+
+const paymentMethodColors: Record<PaymentMethod, string> = {
+  cash: 'bg-green-600',
+  transfer: 'bg-blue-600',
+  unpaid: 'bg-red-600',
+};
 
 interface TournamentViewProps {
   tournamentId: string;
@@ -222,9 +234,16 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
             {/* 手機版：卡片式佈局 */}
             <div className="md:hidden space-y-3">
               {displayPlayers.map((player) => (
-                <div key={player.id} className="bg-gray-700 rounded-lg p-4 border border-gray-600">
+                <div 
+                  key={player.id} 
+                  className={`bg-gray-700 rounded-lg p-4 border-2 ${
+                    player.paymentMethod === 'unpaid' 
+                      ? 'border-red-600 bg-red-900 bg-opacity-40' 
+                      : 'border-gray-600'
+                  }`}
+                >
                   <div className="font-mono font-bold text-lg text-poker-gold-300 mb-2">{player.memberId}</div>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                     <div>
                       <span className="text-gray-400">買入次數：</span>
                       <span className="font-semibold">{player.buyInCount}</span>
@@ -234,26 +253,43 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                       <span className="font-semibold">{player.currentChips.toLocaleString()}</span>
                     </div>
                   </div>
+                  <div>
+                    <span className="text-gray-400 text-sm">支付方式：</span>
+                    <span className={`ml-2 px-3 py-1 rounded-lg text-sm font-semibold text-white ${paymentMethodColors[player.paymentMethod]}`}>
+                      {paymentMethodLabels[player.paymentMethod]}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
             
             {/* 桌面版：表格佈局 */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full min-w-[400px]">
+              <table className="w-full min-w-[500px]">
                 <thead>
                   <tr className="border-b border-gray-700">
                     <th className="text-left py-3 px-4">會編</th>
                     <th className="text-left py-3 px-4">買入次數</th>
                     <th className="text-left py-3 px-4">當前碼量</th>
+                    <th className="text-left py-3 px-4">支付方式</th>
                   </tr>
                 </thead>
                 <tbody>
                   {displayPlayers.map((player) => (
-                    <tr key={player.id} className="border-b border-gray-700 hover:bg-gray-700">
+                    <tr 
+                      key={player.id} 
+                      className={`border-b border-gray-700 hover:bg-gray-700 ${
+                        player.paymentMethod === 'unpaid' ? 'bg-red-900 bg-opacity-20' : ''
+                      }`}
+                    >
                       <td className="py-4 px-4 font-mono font-semibold text-xl">{player.memberId}</td>
                       <td className="py-4 px-4">{player.buyInCount}</td>
                       <td className="py-4 px-4">{player.currentChips.toLocaleString()}</td>
+                      <td className="py-4 px-4">
+                        <span className={`px-3 py-1 rounded-lg text-sm font-semibold text-white ${paymentMethodColors[player.paymentMethod]}`}>
+                          {paymentMethodLabels[player.paymentMethod]}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
