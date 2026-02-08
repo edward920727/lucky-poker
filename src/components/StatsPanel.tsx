@@ -1,12 +1,12 @@
 interface StatsPanelProps {
-  totalPlayers: number;
+  totalBuyInGroups: number;
   expectedTotalChips: number;
   actualTotalChips: number;
   isBalanced: boolean;
 }
 
 export default function StatsPanel({
-  totalPlayers,
+  totalBuyInGroups,
   expectedTotalChips,
   actualTotalChips,
   isBalanced,
@@ -18,9 +18,9 @@ export default function StatsPanel({
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-2xl">👥</span>
-            <p className="text-sm md:text-base font-semibold text-blue-200">參賽人數</p>
+            <p className="text-sm md:text-base font-semibold text-blue-200">買入組數</p>
           </div>
-          <p className="text-4xl md:text-5xl font-black text-white">{totalPlayers}</p>
+          <p className="text-4xl md:text-5xl font-black text-white">{totalBuyInGroups}</p>
         </div>
       </div>
       
@@ -59,7 +59,7 @@ export default function StatsPanel({
               <span>碼量不符，請檢查是否有漏記</span>
             </div>
           )}
-          {isBalanced && totalPlayers > 0 && (
+          {isBalanced && totalBuyInGroups > 0 && (
             <div className="mt-3 text-sm md:text-base font-bold flex items-center gap-2 bg-green-700 bg-opacity-50 px-3 py-1.5 rounded-lg border border-green-400">
               <span className="text-xl">✓</span>
               <span>碼量平衡</span>

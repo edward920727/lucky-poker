@@ -11,8 +11,19 @@ export default function PrizePoolCalculator({ players, onCalculationChange }: Pr
   const [isExpanded, setIsExpanded] = useState(false);
   const [entryFee, setEntryFee] = useState<number>(600);
   const [totalGroups, setTotalGroups] = useState<number>(0);
+  const [isManualGroups, setIsManualGroups] = useState(false); // 是否手動設定總組數
   const [deduction, setDeduction] = useState<number>(0);
   const [topThreePercentages, setTopThreePercentages] = useState<[number, number, number]>([50, 30, 20]);
+
+  // 計算總買入次數（所有玩家的 buyInCount 總和）
+  const totalBuyInCount = players.reduce((sum, p) => sum + p.buyInCount, 0);
+
+  // 當玩家買入次數變化時，如果不是手動模式，自動更新總組數
+  useEffect(() => {
+    if (!isManualGroups) {
+      setTotalGroups(totalBuyInCount);
+    }
+  }, [totalBuyInCount, isManualGroups]);
 
   const totalPrizePool = (entryFee * totalGroups) - deduction;
   
@@ -82,13 +93,50 @@ export default function PrizePoolCalculator({ players, onCalculationChange }: Pr
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2">總組數</label>
-          <input
-            type="number"
-            value={totalGroups}
-            onChange={(e) => setTotalGroups(parseInt(e.target.value) || 0)}
-            className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium">總組數</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="manualGroups"
+                checked={isManualGroups}
+                onChange={(e) => {
+                  setIsManualGroups(e.target.checked);
+                  if (!e.target.checked) {
+                    setTotalGroups(totalBuyInCount);
+                  }
+                }}
+                className="w-4 h-4 rounded border-poker-gold-600 bg-gray-800 text-poker-gold-600 focus:ring-poker-gold-500"
+              />
+              <label htmlFor="manualGroups" className="text-xs text-gray-400 cursor-pointer">
+                手動設定
+              </label>
+            </div>
+          </div>
+          <div className="relative">
+            <input
+              type="number"
+              value={totalGroups}
+              onChange={(e) => {
+                setTotalGroups(parseInt(e.target.value) || 0);
+                setIsManualGroups(true);
+              }}
+              className={`w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                !isManualGroups ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : ''
+              }`}
+              disabled={!isManualGroups}
+            />
+            {!isManualGroups && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-poker-gold-400">
+                自動：{totalBuyInCount}
+              </div>
+            )}
+          </div>
+          {!isManualGroups && (
+            <p className="text-xs text-gray-500 mt-1">
+              💡 自動計算：總買入次數 = {totalBuyInCount} 組
+            </p>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium mb-2">提撥金額 (NT$)</label>
@@ -110,7 +158,7 @@ export default function PrizePoolCalculator({ players, onCalculationChange }: Pr
           </span>
         </div>
         <div className="text-sm mt-2 opacity-90">
-          (報名費 {entryFee.toLocaleString()} × {totalGroups} 組) - 提撥 {deduction.toLocaleString()}
+          (報名費 {entryFee.toLocaleString()} × {totalGroups} 組{!isManualGroups && ` (自動計算：${totalBuyInCount} 次買入)`}) - 提撥 {deduction.toLocaleString()}
         </div>
       </div>
 

@@ -14,7 +14,7 @@ interface GroupedTournaments {
   date: string; // YYYY-MM-DD 格式
   displayDate: string; // 显示用的日期格式
   tournaments: TournamentRecord[];
-  totalPlayers: number; // 该日期总参赛人次
+  totalBuyInGroups: number; // 该日期总买入组数
   totalBuyIn: number; // 该日期总买入金额
   totalDeduction: number; // 该日期总提拨金额（如果有记录）
 }
@@ -68,14 +68,14 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
           date: dateKey,
           displayDate: formatDateFull(tournament.date),
           tournaments: [],
-          totalPlayers: 0,
+          totalBuyInGroups: 0,
           totalBuyIn: 0,
           totalDeduction: 0,
         };
       }
 
       grouped[dateKey].tournaments.push(tournament);
-      grouped[dateKey].totalPlayers += tournament.totalPlayers;
+      grouped[dateKey].totalBuyInGroups += tournament.totalPlayers; // totalPlayers 現在存的是買入組數
       grouped[dateKey].totalBuyIn += tournament.totalBuyIn;
       // 如果有提拨金额字段，累加（目前 TournamentRecord 没有这个字段，先设为0）
       // grouped[dateKey].totalDeduction += (tournament as any).deduction || 0;
@@ -279,9 +279,9 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
                           <div className="bg-gradient-to-br from-blue-600 to-blue-800 bg-opacity-40 px-4 py-3 rounded-xl border border-blue-500 border-opacity-50 shadow-lg">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-lg">👥</span>
-                              <p className="text-xs text-blue-200 font-medium">總參賽人次</p>
+                              <p className="text-xs text-blue-200 font-medium">總買入組數</p>
                             </div>
-                            <p className="text-xl font-bold text-blue-100">{group.totalPlayers} 人</p>
+                            <p className="text-xl font-bold text-blue-100">{group.totalBuyInGroups} 組</p>
                           </div>
                           <div className="bg-gradient-to-br from-poker-gold-600 to-poker-gold-800 bg-opacity-40 px-4 py-3 rounded-xl border border-poker-gold-500 border-opacity-50 shadow-lg">
                             <div className="flex items-center gap-2 mb-1">
@@ -357,8 +357,8 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                                   <div className="bg-blue-600 bg-opacity-20 px-3 py-2 rounded-lg border border-blue-500 border-opacity-30">
-                                    <p className="text-xs text-blue-300 mb-1 font-medium">參賽人數</p>
-                                    <p className="text-base font-bold text-blue-200">{tournament.totalPlayers} 人</p>
+                                    <p className="text-xs text-blue-300 mb-1 font-medium">買入組數</p>
+                                    <p className="text-base font-bold text-blue-200">{tournament.totalPlayers} 組</p>
                                   </div>
                                   <div className="bg-poker-gold-600 bg-opacity-20 px-3 py-2 rounded-lg border border-poker-gold-500 border-opacity-30">
                                     <p className="text-xs text-poker-gold-300 mb-1 font-medium">總買入金額</p>

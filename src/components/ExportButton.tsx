@@ -31,8 +31,8 @@ export default function ExportButton({ players, config, prizeCalculation }: Expo
     }
   };
 
-  const totalPlayers = players.length;
-  const expectedTotalChips = totalPlayers * config.startChip;
+  const totalBuyInGroups = players.reduce((sum, p) => sum + p.buyInCount, 0);
+  const expectedTotalChips = totalBuyInGroups * config.startChip;
   const actualTotalChips = players.reduce((sum, p) => sum + p.currentChips, 0);
   const isBalanced = expectedTotalChips === actualTotalChips;
 
@@ -59,8 +59,8 @@ export default function ExportButton({ players, config, prizeCalculation }: Expo
 
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-blue-600 p-4 rounded-lg text-center">
-            <div className="text-sm opacity-90 mb-1">參賽人數</div>
-            <div className="text-3xl font-bold">{totalPlayers}</div>
+            <div className="text-sm opacity-90 mb-1">買入組數</div>
+            <div className="text-3xl font-bold">{totalBuyInGroups}</div>
           </div>
           <div className="bg-purple-600 p-4 rounded-lg text-center">
             <div className="text-sm opacity-90 mb-1">理論總碼量</div>

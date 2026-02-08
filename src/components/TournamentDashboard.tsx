@@ -27,8 +27,8 @@ export default function TournamentDashboard({
   onSave,
 }: TournamentDashboardProps) {
   const config = TOURNAMENT_TYPES[tournamentType];
-  const totalPlayers = players.length;
-  const expectedTotalChips = totalPlayers * config.startChip;
+  const totalBuyInGroups = players.reduce((sum, p) => sum + p.buyInCount, 0);
+  const expectedTotalChips = totalBuyInGroups * config.startChip;
   const actualTotalChips = players.reduce((sum, p) => sum + p.currentChips, 0);
   const isBalanced = expectedTotalChips === actualTotalChips;
   const [prizeCalculation, setPrizeCalculation] = useState<PrizeCalculationResult | null>(null);
@@ -104,7 +104,7 @@ export default function TournamentDashboard({
       date: new Date().toISOString(),
       tournamentType,
       tournamentName: config.name,
-      totalPlayers: players.length,
+      totalPlayers: totalBuyInGroups, // 改為買入組數
       totalBuyIn,
       players: [...players], // 深拷贝玩家数据
       expectedTotalChips,
@@ -188,7 +188,7 @@ export default function TournamentDashboard({
 
         {/* 統計面板 */}
         <StatsPanel
-          totalPlayers={totalPlayers}
+          totalBuyInGroups={totalBuyInGroups}
           expectedTotalChips={expectedTotalChips}
           actualTotalChips={actualTotalChips}
           isBalanced={isBalanced}

@@ -78,7 +78,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
 
         {/* 統計面板 */}
         <StatsPanel
-          totalPlayers={tournament.totalPlayers}
+          totalBuyInGroups={tournament.totalPlayers}
           expectedTotalChips={tournament.expectedTotalChips}
           actualTotalChips={tournament.actualTotalChips}
           isBalanced={tournament.expectedTotalChips === tournament.actualTotalChips}
