@@ -198,7 +198,11 @@ export default function TournamentDashboard({
         <FinancialStats players={players} tournamentType={tournamentType} />
 
         {/* 獎金分配計算器 */}
-        <PrizePoolCalculator players={players} onCalculationChange={setPrizeCalculation} />
+        <PrizePoolCalculator 
+          players={players} 
+          tournamentType={tournamentType}
+          onCalculationChange={setPrizeCalculation} 
+        />
 
         {/* 玩家輸入區域 */}
         <PlayerInput

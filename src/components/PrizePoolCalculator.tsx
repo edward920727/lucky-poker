@@ -1,17 +1,21 @@
 import { useState, useEffect } from 'react';
 import { calculatePrize, validateTopThreePercentages, PrizeCalculationResult } from '../../utils/prizeCalculator';
-import { Player } from '../../constants/pokerConfig';
+import { Player, TournamentType } from '../../constants/pokerConfig';
 
 interface PrizePoolCalculatorProps {
   players: Player[];
+  tournamentType?: TournamentType; // 賽事類型
   onCalculationChange?: (result: PrizeCalculationResult | null) => void;
 }
 
-export default function PrizePoolCalculator({ players, onCalculationChange }: PrizePoolCalculatorProps) {
+export default function PrizePoolCalculator({ players, tournamentType, onCalculationChange }: PrizePoolCalculatorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [entryFee, setEntryFee] = useState<number>(600);
+  // 根據賽事類型自動設置報名費
+  const defaultEntryFee = tournamentType ? parseInt(tournamentType) : 600;
+  const [entryFee, setEntryFee] = useState<number>(defaultEntryFee);
   const [totalGroups, setTotalGroups] = useState<number>(0);
   const [isManualGroups, setIsManualGroups] = useState(false); // 是否手動設定總組數
+  const [isManualEntryFee, setIsManualEntryFee] = useState(false); // 是否手動設定報名費
   const [deduction, setDeduction] = useState<number>(0);
   const [topThreePercentages, setTopThreePercentages] = useState<[number, number, number]>([50, 30, 20]);
 
@@ -24,6 +28,14 @@ export default function PrizePoolCalculator({ players, onCalculationChange }: Pr
       setTotalGroups(totalBuyInCount);
     }
   }, [totalBuyInCount, isManualGroups]);
+
+  // 當賽事類型變化時，如果不是手動模式，自動更新報名費
+  useEffect(() => {
+    if (!isManualEntryFee && tournamentType) {
+      const newEntryFee = parseInt(tournamentType);
+      setEntryFee(newEntryFee);
+    }
+  }, [tournamentType, isManualEntryFee]);
 
   const totalPrizePool = (entryFee * totalGroups) - deduction;
   
@@ -51,9 +63,23 @@ export default function PrizePoolCalculator({ players, onCalculationChange }: Pr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totalPrizePool, players.length, players.map(p => `${p.memberId}-${p.currentChips}`).join(','), topThreePercentages.join(','), totalDistributed, adjustmentAmount]);
 
-  const handlePercentageChange = (rank: 1 | 2 | 3, value: number) => {
+  const handlePercentageChange = (rank: 1 | 2 | 3, value: string) => {
+    // 允許空字符串，這樣用戶可以刪除所有內容
+    if (value === '' || value === null || value === undefined) {
+      const newPercentages: [number, number, number] = [...topThreePercentages];
+      newPercentages[rank - 1] = 0;
+      setTopThreePercentages(newPercentages);
+      return;
+    }
+    
+    const numValue = parseFloat(value);
+    // 如果是 NaN，不更新
+    if (isNaN(numValue)) {
+      return;
+    }
+    
     const newPercentages: [number, number, number] = [...topThreePercentages];
-    newPercentages[rank - 1] = Math.max(0, Math.min(100, value));
+    newPercentages[rank - 1] = Math.max(0, Math.min(100, numValue));
     setTopThreePercentages(newPercentages);
   };
 
@@ -84,13 +110,50 @@ export default function PrizePoolCalculator({ players, onCalculationChange }: Pr
           {/* 輸入區域 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-6">
         <div>
-          <label className="block text-sm font-medium mb-2">報名費 (NT$)</label>
-          <input
-            type="number"
-            value={entryFee}
-            onChange={(e) => setEntryFee(parseInt(e.target.value) || 0)}
-            className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium">報名費 (NT$)</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="manualEntryFee"
+                checked={isManualEntryFee}
+                onChange={(e) => {
+                  setIsManualEntryFee(e.target.checked);
+                  if (!e.target.checked && tournamentType) {
+                    setEntryFee(parseInt(tournamentType));
+                  }
+                }}
+                className="w-4 h-4 rounded border-poker-gold-600 bg-gray-800 text-poker-gold-600 focus:ring-poker-gold-500"
+              />
+              <label htmlFor="manualEntryFee" className="text-xs text-gray-400 cursor-pointer">
+                手動設定
+              </label>
+            </div>
+          </div>
+          <div className="relative">
+            <input
+              type="number"
+              value={entryFee}
+              onChange={(e) => {
+                setEntryFee(parseInt(e.target.value) || 0);
+                setIsManualEntryFee(true);
+              }}
+              className={`w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                !isManualEntryFee ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : ''
+              }`}
+              disabled={!isManualEntryFee}
+            />
+            {!isManualEntryFee && tournamentType && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-poker-gold-400">
+                自動：{tournamentType}
+              </div>
+            )}
+          </div>
+          {!isManualEntryFee && tournamentType && (
+            <p className="text-xs text-gray-500 mt-1">
+              💡 自動設定：根據賽事類型 = NT$ {tournamentType}
+            </p>
+          )}
         </div>
         <div>
           <div className="flex items-center justify-between mb-2">
@@ -177,8 +240,8 @@ export default function PrizePoolCalculator({ players, onCalculationChange }: Pr
                   <label className="block text-sm text-gray-400 mb-1">獎池百分比 (%)</label>
                   <input
                     type="number"
-                    value={topThreePercentages[rank - 1]}
-                    onChange={(e) => handlePercentageChange(rank as 1 | 2 | 3, parseFloat(e.target.value) || 0)}
+                    value={topThreePercentages[rank - 1] || ''}
+                    onChange={(e) => handlePercentageChange(rank as 1 | 2 | 3, e.target.value)}
                     min="0"
                     max="100"
                     step="0.1"
