@@ -6,6 +6,7 @@ import AuditLogPanel from './AuditLogPanel';
 interface IndexPageProps {
   onCreateNew: () => void;
   onViewTournament: (id: string) => void;
+  onLogout?: () => void;
 }
 
 interface GroupedTournaments {
@@ -17,7 +18,7 @@ interface GroupedTournaments {
   totalDeduction: number; // 该日期总提拨金额（如果有记录）
 }
 
-export default function IndexPage({ onCreateNew, onViewTournament }: IndexPageProps) {
+export default function IndexPage({ onCreateNew, onViewTournament, onLogout }: IndexPageProps) {
   const [tournaments, setTournaments] = useState<TournamentRecord[]>([]);
   const [showAuditLog, setShowAuditLog] = useState(false);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
@@ -147,6 +148,19 @@ export default function IndexPage({ onCreateNew, onViewTournament }: IndexPagePr
       </div>
 
       <div className="max-w-7xl mx-auto p-6 relative z-10">
+        {/* 登出按鈕 - 右上角 */}
+        {onLogout && (
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={onLogout}
+              className="px-4 md:px-6 py-2 md:py-3 bg-white hover:bg-gray-100 rounded-xl text-sm md:text-base font-semibold text-black transition-all duration-200 border-2 border-white shadow-lg flex items-center gap-2"
+            >
+              <span>🚪</span>
+              <span>登出</span>
+            </button>
+          </div>
+        )}
+
         {/* 頂部欄 */}
         <div className="mb-8 text-center">
           <div className="flex items-center justify-center gap-4 mb-4">
