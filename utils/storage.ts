@@ -53,3 +53,38 @@ export function getTournamentById(id: string): TournamentRecord | null {
   const tournaments = getAllTournaments();
   return tournaments.find(t => t.id === id) || null;
 }
+
+/**
+ * 更新赛事记录
+ */
+export function updateTournament(tournament: TournamentRecord): void {
+  try {
+    const tournaments = getAllTournaments();
+    const index = tournaments.findIndex(t => t.id === tournament.id);
+    if (index === -1) {
+      throw new Error('找不到要更新的赛事记录');
+    }
+    
+    // 重新計算統計數據
+    const totalBuyInGroups = tournament.players.reduce((sum, p) => sum + p.buyInCount, 0);
+    const expectedTotalChips = totalBuyInGroups * tournament.startChip;
+    const actualTotalChips = tournament.players.reduce((sum, p) => sum + p.currentChips, 0);
+    const totalBuyIn = tournament.players.reduce((sum, p) => {
+      const entryFee = parseInt(tournament.tournamentType);
+      return sum + (p.buyInCount * entryFee);
+    }, 0);
+    
+    tournaments[index] = {
+      ...tournament,
+      totalPlayers: totalBuyInGroups,
+      totalBuyIn,
+      expectedTotalChips,
+      actualTotalChips,
+    };
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tournaments));
+  } catch (error) {
+    console.error('更新赛事记录失败:', error);
+    alert('更新赛事记录失败，请重试');
+  }
+}

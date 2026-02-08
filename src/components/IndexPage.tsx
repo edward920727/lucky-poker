@@ -376,6 +376,12 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
                               </div>
                               <div className="flex gap-2 relative z-10">
                                 <button
+                                  onClick={() => onViewTournament(tournament.id)}
+                                  className="px-4 py-2 bg-poker-gold-600 hover:bg-poker-gold-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl border-2 border-poker-gold-500"
+                                >
+                                  ✏️ 修改
+                                </button>
+                                <button
                                   onClick={(e) => handleDelete(tournament.id, e)}
                                   className="px-4 py-2 bg-white hover:bg-gray-100 rounded-lg text-sm font-semibold text-black transition-all duration-200 shadow-lg hover:shadow-xl border-2 border-white"
                                 >
