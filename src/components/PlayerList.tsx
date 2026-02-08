@@ -45,9 +45,16 @@ export default function PlayerList({
     }
   };
 
-  const handleChipChange = (id: string, newChips: number) => {
-    if (newChips < 0) return;
-    onUpdatePlayer(id, { currentChips: newChips });
+  const handleChipChange = (id: string, value: string) => {
+    // 允許空字符串，這樣用戶可以刪除 0
+    if (value === '' || value === null || value === undefined) {
+      onUpdatePlayer(id, { currentChips: 0 });
+      return;
+    }
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue) && numValue >= 0) {
+      onUpdatePlayer(id, { currentChips: numValue });
+    }
   };
 
   if (players.length === 0) {
@@ -117,8 +124,8 @@ export default function PlayerList({
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
-                    value={player.currentChips}
-                    onChange={(e) => handleChipChange(player.id, parseInt(e.target.value) || 0)}
+                    value={player.currentChips || ''}
+                    onChange={(e) => handleChipChange(player.id, e.target.value)}
                     className="w-32 px-3 py-2 bg-gray-700 rounded-lg text-right font-semibold"
                     min="0"
                   />
@@ -180,8 +187,8 @@ export default function PlayerList({
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
-                      value={player.currentChips}
-                      onChange={(e) => handleChipChange(player.id, parseInt(e.target.value) || 0)}
+                      value={player.currentChips || ''}
+                      onChange={(e) => handleChipChange(player.id, e.target.value)}
                       className="w-32 px-2 py-1 bg-gray-700 rounded text-right"
                       min="0"
                     />
