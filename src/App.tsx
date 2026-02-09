@@ -6,13 +6,14 @@ import TournamentView from './components/TournamentView';
 import TournamentSettlement from './components/TournamentSettlement';
 import UserManagement from './components/UserManagement';
 import AllTournamentsView from './components/AllTournamentsView';
+import QuickEditView from './components/QuickEditView';
 import Login from './components/Login';
 import { TournamentType, Player } from '../constants/pokerConfig';
 import { CustomTournamentConfig } from '../types/tournament';
 import { isAuthenticated, logout, getCurrentUsername } from './utils/auth';
 import { isAdmin } from './utils/userManagement';
 
-type AppView = 'index' | 'selector' | 'dashboard' | 'view' | 'userManagement' | 'allTournaments' | 'settlement';
+type AppView = 'index' | 'selector' | 'dashboard' | 'view' | 'userManagement' | 'allTournaments' | 'settlement' | 'quickEdit';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -96,6 +97,16 @@ function App() {
     setCurrentView('view');
   };
 
+  const handleQuickEdit = (id: string) => {
+    setViewingTournamentId(id);
+    setCurrentView('quickEdit');
+  };
+
+  const handleBackFromQuickEdit = () => {
+    setCurrentView('index');
+    setViewingTournamentId(null);
+  };
+
   const handleOpenUserManagement = () => {
     setCurrentView('userManagement');
   };
@@ -156,6 +167,7 @@ function App() {
         onLogout={handleLogout}
         onOpenUserManagement={userIsAdmin ? handleOpenUserManagement : undefined}
         onViewAllTournaments={handleViewAllTournaments}
+        onQuickEdit={handleQuickEdit}
       />
     );
   }
@@ -214,6 +226,15 @@ function App() {
         tournamentId={viewingTournamentId || undefined}
         onBack={handleBackFromSettlement}
         onSave={handleSaveSettlement}
+      />
+    );
+  }
+
+  if (currentView === 'quickEdit' && viewingTournamentId) {
+    return (
+      <QuickEditView
+        tournamentId={viewingTournamentId}
+        onBack={handleBackFromQuickEdit}
       />
     );
   }

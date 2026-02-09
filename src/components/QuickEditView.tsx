@@ -89,12 +89,15 @@ export default function QuickEditView({ tournamentId, onBack }: QuickEditViewPro
 
   // 更新玩家籌碼（自動保存）
   const handlePlayerUpdate = useCallback((id: string, updates: Partial<Player>) => {
-    const updatedPlayers = players.map(p => 
-      p.id === id ? { ...p, ...updates } : p
-    );
-    setPlayers(updatedPlayers);
-    autoSave(updatedPlayers);
-  }, [players, autoSave]);
+    setPlayers(prevPlayers => {
+      const updatedPlayers = prevPlayers.map(p => 
+        p.id === id ? { ...p, ...updates } : p
+      );
+      // 異步保存，避免阻塞 UI
+      setTimeout(() => autoSave(updatedPlayers), 0);
+      return updatedPlayers;
+    });
+  }, [autoSave]);
 
   // 計算獎金分配（即時更新）
   const prizeCalculation: PrizeCalculationResult | null = useMemo(() => {

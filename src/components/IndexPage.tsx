@@ -11,6 +11,7 @@ interface IndexPageProps {
   onLogout?: () => void;
   onOpenUserManagement?: () => void;
   onViewAllTournaments?: () => void;
+  onQuickEdit?: (tournamentId: string) => void;
 }
 
 interface GroupedTournaments {
@@ -22,7 +23,7 @@ interface GroupedTournaments {
   totalDeduction: number; // 该日期总提拨金额（如果有记录）
 }
 
-export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onOpenUserManagement, onViewAllTournaments }: IndexPageProps) {
+export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onOpenUserManagement, onViewAllTournaments, onQuickEdit }: IndexPageProps) {
   const [tournaments, setTournaments] = useState<TournamentRecord[]>([]);
   const [showAuditLog, setShowAuditLog] = useState(false);
   const [showMemberQuery, setShowMemberQuery] = useState(false);
@@ -261,6 +262,23 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
             <span className="text-4xl relative z-10">🃏</span>
             <span className="relative z-10">創建新賽事</span>
           </button>
+          
+          {/* 手機版專屬：快速結算按鈕 */}
+          {onQuickEdit && filteredGroups.length > 0 && filteredGroups[0].tournaments.length > 0 && (
+            <button
+              onClick={() => {
+                // 獲取今日最近一場比賽
+                const latestTournament = filteredGroups[0].tournaments[0];
+                onQuickEdit(latestTournament.id);
+              }}
+              className="md:hidden group relative bg-gradient-to-r from-poker-gold-600 to-poker-gold-700 hover:from-poker-gold-700 hover:to-poker-gold-800 text-white font-bold py-6 px-12 rounded-2xl text-2xl shadow-2xl transform hover:scale-105 transition-all duration-300 flex items-center gap-4 overflow-hidden border-2 border-poker-gold-500"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20 transform -skew-x-12 group-hover:translate-x-full transition-all duration-1000"></div>
+              <span className="text-4xl relative z-10">⚡</span>
+              <span className="relative z-10">快速結算/更碼</span>
+            </button>
+          )}
+          
           <button
             onClick={() => setShowMemberQuery(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-xl transition-all duration-200 border-2 border-blue-500 flex items-center gap-2"

@@ -30,7 +30,7 @@ interface TournamentViewProps {
 }
 
 // 支付方式統計組件
-function PaymentMethodStats({ players, entryFee }: { players: Player[]; entryFee: number }) {
+const PaymentMethodStats = ({ players, entryFee }: { players: Player[]; entryFee: number }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   
   const calculateByPaymentMethod = (method: PaymentMethod) => {
@@ -95,7 +95,7 @@ function PaymentMethodStats({ players, entryFee }: { players: Player[]; entryFee
       )}
     </div>
   );
-}
+};
 
 export default function TournamentView({ tournamentId, onBack }: TournamentViewProps) {
   const [tournament, setTournament] = useState<TournamentRecord | null>(null);

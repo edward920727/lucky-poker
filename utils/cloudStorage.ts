@@ -40,12 +40,33 @@ function initFirebase(): boolean {
 
 // 轉換 TournamentRecord 為 Firestore 格式
 function tournamentToFirestore(tournament: TournamentRecord): any {
-  return {
+  // 過濾掉 undefined 值，因為 Firestore 不支持 undefined
+  const cleaned: any = {
     ...tournament,
     date: Timestamp.fromDate(new Date(tournament.date)),
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
   };
+  
+  // 移除所有 undefined 值
+  Object.keys(cleaned).forEach(key => {
+    if (cleaned[key] === undefined) {
+      delete cleaned[key];
+    }
+  });
+  
+  // 特別處理 nested 對象（如 customConfig）
+  if (cleaned.customConfig) {
+    const cleanedConfig: any = {};
+    Object.keys(cleaned.customConfig).forEach(key => {
+      if (cleaned.customConfig[key] !== undefined) {
+        cleanedConfig[key] = cleaned.customConfig[key];
+      }
+    });
+    cleaned.customConfig = cleanedConfig;
+  }
+  
+  return cleaned;
 }
 
 // 從 Firestore 轉換為 TournamentRecord
