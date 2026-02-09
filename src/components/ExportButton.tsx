@@ -15,10 +15,9 @@ interface ExportButtonProps {
   config: { name: string; startChip: number };
   prizeCalculation?: PrizeCalculationResult | null;
   tournamentName?: string; // 完整的賽事名稱（包含場次號碼，如 "600#1"）
-  entryFee?: number; // 報名費（用於計算支付方式統計）
 }
 
-export default function ExportButton({ players, config, prizeCalculation, tournamentName, entryFee }: ExportButtonProps) {
+export default function ExportButton({ players, config, prizeCalculation, tournamentName }: ExportButtonProps) {
   const exportRef = useRef<HTMLDivElement>(null);
 
   const handleExport = async () => {

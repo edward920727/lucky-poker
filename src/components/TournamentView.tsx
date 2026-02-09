@@ -30,7 +30,7 @@ interface TournamentViewProps {
 }
 
 // 支付方式統計組件
-const PaymentMethodStats = ({ players, entryFee }: { players: Player[]; entryFee: number }) => {
+function PaymentMethodStats({ players, entryFee }: { players: Player[]; entryFee: number }) {
   const [isExpanded, setIsExpanded] = useState(false);
   
   const calculateByPaymentMethod = (method: PaymentMethod) => {
@@ -95,7 +95,7 @@ const PaymentMethodStats = ({ players, entryFee }: { players: Player[]; entryFee
       )}
     </div>
   );
-};
+}
 
 export default function TournamentView({ tournamentId, onBack }: TournamentViewProps) {
   const [tournament, setTournament] = useState<TournamentRecord | null>(null);
@@ -226,20 +226,28 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
     // 第二步：淨獎池 = 總獎金池 - 單場總提撥金
     const totalPrizePool = (entryFee - administrativeFeePerPerson) * totalBuyInGroups - totalDeduction;
 
+    // 構建更新對象，只包含有效的字段
     const updatedTournament: TournamentRecord = {
       ...tournament,
       players: editedPlayers,
       totalPlayers: totalBuyInGroups,
       totalBuyIn,
       totalAdministrativeFee,
-      totalDeduction: totalDeduction > 0 ? totalDeduction : undefined,
       totalPrizePool,
       // 如果是自定義賽事，更新 customConfig 中的提撥金
       customConfig: tournament.customConfig ? {
         ...tournament.customConfig,
-        totalDeduction: totalDeduction > 0 ? totalDeduction : undefined,
+        ...(totalDeduction > 0 ? { totalDeduction } : {}),
       } : undefined,
     };
+    
+    // 只在 totalDeduction > 0 時添加該字段
+    if (totalDeduction > 0) {
+      updatedTournament.totalDeduction = totalDeduction;
+    } else {
+      // 明確刪除該字段（如果存在）
+      delete (updatedTournament as any).totalDeduction;
+    }
 
     updateTournament(updatedTournament);
     setTournament(updatedTournament);
@@ -251,12 +259,12 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
     if (tournament) {
       setEditedPlayers(JSON.parse(JSON.stringify(tournament.players))); // 深拷貝
       // 重置提撥金編輯值
-      if (tournament.customConfig?.deductionPerGroup !== undefined) {
-        setEditedDeductionPerGroup(tournament.customConfig.deductionPerGroup.toString());
-      } else if (tournament.deductionPerGroup !== undefined) {
-        setEditedDeductionPerGroup(tournament.deductionPerGroup.toString());
+      if (tournament.customConfig?.totalDeduction !== undefined) {
+        setEditedTotalDeduction(tournament.customConfig.totalDeduction.toString());
+      } else if (tournament.totalDeduction !== undefined) {
+        setEditedTotalDeduction(tournament.totalDeduction.toString());
       } else {
-        setEditedDeductionPerGroup('');
+        setEditedTotalDeduction('');
       }
     }
     setIsEditMode(false);
@@ -326,7 +334,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
     }
 
     const isCustom = tournament.tournamentType === 'custom' && tournament.customConfig;
-    const config = isCustom
+    const config = isCustom && tournament.customConfig
       ? { name: tournament.customConfig.name, startChip: tournament.customConfig.startChip }
       : TOURNAMENT_TYPES[tournament.tournamentType as keyof typeof TOURNAMENT_TYPES];
     const history = PLAYER_HISTORY_DB[newMemberId.trim()] || [];
@@ -378,7 +386,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
   }
 
   const isCustom = tournament.tournamentType === 'custom' && tournament.customConfig;
-  const config = isCustom
+  const config = isCustom && tournament.customConfig
     ? { name: tournament.customConfig.name, startChip: tournament.customConfig.startChip }
     : TOURNAMENT_TYPES[tournament.tournamentType as keyof typeof TOURNAMENT_TYPES];
 
@@ -433,7 +441,6 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                     config={config}
                     prizeCalculation={prizeCalculation}
                     tournamentName={tournament.tournamentName}
-                    entryFee={entryFee}
                   />
                 </div>
               </>
@@ -578,11 +585,6 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                     <p className="text-2xl font-bold text-orange-300">
                       NT$ {tournament.totalDeduction.toLocaleString()}
                     </p>
-                    {tournament.deductionPerGroup !== undefined && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        單組 {tournament.deductionPerGroup.toLocaleString()} × {tournament.totalPlayers} 組
-                      </p>
-                    )}
                   </div>
                 )}
                 <div className="bg-poker-gold-900 bg-opacity-50 rounded-xl p-4 border border-poker-gold-700">

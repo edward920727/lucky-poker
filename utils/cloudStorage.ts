@@ -59,12 +59,26 @@ function tournamentToFirestore(tournament: TournamentRecord): any {
   if (cleaned.customConfig) {
     const cleanedConfig: any = {};
     Object.keys(cleaned.customConfig).forEach(key => {
-      if (cleaned.customConfig[key] !== undefined) {
-        cleanedConfig[key] = cleaned.customConfig[key];
+      const value = cleaned.customConfig[key];
+      // 過濾掉 undefined 和 null 值（Firestore 不支持）
+      if (value !== undefined && value !== null) {
+        cleanedConfig[key] = value;
       }
     });
-    cleaned.customConfig = cleanedConfig;
+    // 如果清理後的 config 為空，則不包含該字段
+    if (Object.keys(cleanedConfig).length > 0) {
+      cleaned.customConfig = cleanedConfig;
+    } else {
+      delete cleaned.customConfig;
+    }
   }
+  
+  // 再次確保所有 undefined 和 null 值都被移除
+  Object.keys(cleaned).forEach(key => {
+    if (cleaned[key] === undefined || cleaned[key] === null) {
+      delete cleaned[key];
+    }
+  });
   
   return cleaned;
 }

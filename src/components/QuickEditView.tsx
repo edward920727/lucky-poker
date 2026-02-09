@@ -59,20 +59,28 @@ export default function QuickEditView({ tournamentId, onBack }: QuickEditViewPro
       // 計算總獎池
       const totalPrizePool = (entryFee - administrativeFeePerPerson) * totalBuyInGroups - totalDeduction;
 
+      // 構建更新對象，只包含有效的字段
       const updatedTournament: TournamentRecord = {
         ...tournament,
         players: updatedPlayers,
         totalPlayers: totalBuyInGroups,
         totalBuyIn,
         totalAdministrativeFee,
-        totalDeduction: totalDeduction > 0 ? totalDeduction : undefined,
         totalPrizePool,
         // 如果是自定義賽事，更新 customConfig
         customConfig: tournament.customConfig ? {
           ...tournament.customConfig,
-          totalDeduction: totalDeduction > 0 ? totalDeduction : undefined,
+          ...(totalDeduction > 0 ? { totalDeduction } : {}),
         } : undefined,
       };
+      
+      // 只在 totalDeduction > 0 時添加該字段
+      if (totalDeduction > 0) {
+        updatedTournament.totalDeduction = totalDeduction;
+      } else {
+        // 明確刪除該字段（如果存在）
+        delete (updatedTournament as any).totalDeduction;
+      }
 
       setIsSaving(true);
       updateTournament(updatedTournament);
@@ -191,7 +199,6 @@ export default function QuickEditView({ tournamentId, onBack }: QuickEditViewPro
         {/* 玩家列表（快速編輯模式） */}
         <QuickEditPlayerList
           players={players}
-          startChip={config?.startChip || 0}
           onUpdatePlayer={handlePlayerUpdate}
           prizeCalculation={prizeCalculation}
         />

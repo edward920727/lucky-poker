@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
 import { ICM_ADMINISTRATIVE_FEE_CONFIG } from '../../constants/icmRewardConfig';
-import { getAdministrativeFeeConfig, updateAdministrativeFeeConfigBatch, getAdministrativeFee } from '../../utils/administrativeFeeConfig';
-import { getTaiwanDateTime } from '../utils/dateUtils';
+import { getAdministrativeFeeConfig, updateAdministrativeFeeConfigBatch } from '../../utils/administrativeFeeConfig';
 
 interface TournamentSettlementProps {
-  tournamentId?: string; // 可選的關聯賽事ID
   onBack: () => void;
   onSave?: () => void;
 }
 
-export default function TournamentSettlement({ tournamentId, onBack, onSave }: TournamentSettlementProps) {
+export default function TournamentSettlement({ onBack, onSave }: TournamentSettlementProps) {
   const [feeConfig, setFeeConfig] = useState<Record<number, number>>({});
   const [editingFee, setEditingFee] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);

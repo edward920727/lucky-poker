@@ -223,7 +223,6 @@ function App() {
   if (currentView === 'settlement') {
     return (
       <TournamentSettlement
-        tournamentId={viewingTournamentId || undefined}
         onBack={handleBackFromSettlement}
         onSave={handleSaveSettlement}
       />

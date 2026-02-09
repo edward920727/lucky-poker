@@ -4,14 +4,12 @@ import { PrizeCalculationResult } from '../../utils/prizeCalculator';
 
 interface QuickEditPlayerListProps {
   players: Player[];
-  startChip: number;
   onUpdatePlayer: (id: string, updates: Partial<Player>) => void;
   prizeCalculation: PrizeCalculationResult | null;
 }
 
 export default function QuickEditPlayerList({
   players,
-  startChip,
   onUpdatePlayer,
   prizeCalculation,
 }: QuickEditPlayerListProps) {
