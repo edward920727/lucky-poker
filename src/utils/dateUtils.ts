@@ -51,8 +51,31 @@ export function getTaiwanTodayDateKey(): string {
 
 /**
  * 將日期字符串轉換為日期對象（假設為台灣時區）
+ * 支持字符串、Date 對象或 Firestore Timestamp
  */
-export function parseTaiwanDate(dateString: string): Date {
+export function parseTaiwanDate(dateInput: string | Date | any): Date {
+  // 處理不同類型的輸入
+  let dateString: string;
+  
+  if (!dateInput) {
+    // 如果輸入為 null 或 undefined，返回當前日期
+    return new Date();
+  }
+  
+  if (dateInput instanceof Date) {
+    // 如果是 Date 對象，轉換為 ISO 字符串
+    dateString = dateInput.toISOString();
+  } else if (typeof dateInput === 'object' && dateInput.toDate) {
+    // 如果是 Firestore Timestamp，轉換為 Date 然後轉為字符串
+    dateString = dateInput.toDate().toISOString();
+  } else if (typeof dateInput === 'string') {
+    // 如果已經是字符串，直接使用
+    dateString = dateInput;
+  } else {
+    // 其他情況，嘗試轉換為字符串
+    dateString = String(dateInput);
+  }
+  
   // 如果日期字符串不包含時區信息，假設它是台灣時區
   if (!dateString.includes('+') && !dateString.includes('Z')) {
     // 格式：YYYY-MM-DD 或 YYYY-MM-DDTHH:mm:ss
@@ -89,8 +112,31 @@ export function parseTaiwanDate(dateString: string): Date {
 /**
  * 從日期字符串中提取日期部分（YYYY-MM-DD）
  * 如果日期字符串包含時區信息（Z 或 +），會轉換為台灣時區後再提取
+ * 支持字符串、Date 對象或 Firestore Timestamp
  */
-export function getDateKey(dateString: string): string {
+export function getDateKey(dateInput: string | Date | any): string {
+  // 處理不同類型的輸入
+  let dateString: string;
+  
+  if (!dateInput) {
+    // 如果輸入為 null 或 undefined，返回今天的日期
+    return getTaiwanTodayDateKey();
+  }
+  
+  if (dateInput instanceof Date) {
+    // 如果是 Date 對象，轉換為 ISO 字符串
+    dateString = dateInput.toISOString();
+  } else if (typeof dateInput === 'object' && dateInput.toDate) {
+    // 如果是 Firestore Timestamp，轉換為 Date 然後轉為字符串
+    dateString = dateInput.toDate().toISOString();
+  } else if (typeof dateInput === 'string') {
+    // 如果已經是字符串，直接使用
+    dateString = dateInput;
+  } else {
+    // 其他情況，嘗試轉換為字符串
+    dateString = String(dateInput);
+  }
+  
   // 如果包含時區信息（UTC 或帶時區偏移），需要轉換為台灣時區
   const hasZ = dateString.includes('Z');
   const hasPlus = dateString.includes('+');
@@ -131,9 +177,10 @@ export function getDateKey(dateString: string): string {
 
 /**
  * 格式化日期為台灣時區顯示
+ * 支持字符串、Date 對象或 Firestore Timestamp
  */
-export function formatTaiwanDate(dateString: string, options?: Intl.DateTimeFormatOptions): string {
-  const date = parseTaiwanDate(dateString);
+export function formatTaiwanDate(dateInput: string | Date | any, options?: Intl.DateTimeFormatOptions): string {
+  const date = parseTaiwanDate(dateInput);
   return date.toLocaleDateString('zh-TW', {
     timeZone: 'Asia/Taipei',
     ...options,
@@ -142,9 +189,10 @@ export function formatTaiwanDate(dateString: string, options?: Intl.DateTimeForm
 
 /**
  * 格式化時間為台灣時區顯示
+ * 支持字符串、Date 對象或 Firestore Timestamp
  */
-export function formatTaiwanTime(dateString: string, options?: Intl.DateTimeFormatOptions): string {
-  const date = parseTaiwanDate(dateString);
+export function formatTaiwanTime(dateInput: string | Date | any, options?: Intl.DateTimeFormatOptions): string {
+  const date = parseTaiwanDate(dateInput);
   return date.toLocaleTimeString('zh-TW', {
     timeZone: 'Asia/Taipei',
     ...options,

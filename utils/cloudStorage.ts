@@ -73,14 +73,39 @@ function tournamentToFirestore(tournament: TournamentRecord): any {
     }
   }
   
-  // 再次確保所有 undefined 和 null 值都被移除
-  Object.keys(cleaned).forEach(key => {
-    if (cleaned[key] === undefined || cleaned[key] === null) {
-      delete cleaned[key];
+  // 再次確保所有 undefined 和 null 值都被移除（遞歸處理）
+  const removeUndefinedAndNull = (obj: any): any => {
+    if (obj === null || obj === undefined) {
+      return undefined;
+    }
+    if (Array.isArray(obj)) {
+      return obj.map(removeUndefinedAndNull).filter(item => item !== undefined && item !== null);
+    }
+    if (typeof obj === 'object') {
+      const cleaned: any = {};
+      Object.keys(obj).forEach(key => {
+        const value = removeUndefinedAndNull(obj[key]);
+        if (value !== undefined && value !== null) {
+          cleaned[key] = value;
+        }
+      });
+      return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+    }
+    return obj;
+  };
+  
+  const finalCleaned = removeUndefinedAndNull(cleaned);
+  
+  // 最後一次遍歷，確保沒有遺漏的 undefined 或 null
+  const result: any = {};
+  Object.keys(finalCleaned || {}).forEach(key => {
+    const value = finalCleaned[key];
+    if (value !== undefined && value !== null) {
+      result[key] = value;
     }
   });
   
-  return cleaned;
+  return result;
 }
 
 // 從 Firestore 轉換為 TournamentRecord

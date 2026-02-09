@@ -24,13 +24,13 @@ const paymentMethodColors: Record<PaymentMethod, string> = {
   unpaid: 'bg-red-600',
 };
 
-interface TournamentViewProps {
-  tournamentId: string;
-  onBack: () => void;
+interface PaymentMethodStatsProps {
+  players: Player[];
+  entryFee: number;
 }
 
-// 支付方式統計組件
-function PaymentMethodStats({ players, entryFee }: { players: Player[]; entryFee: number }) {
+// 支付方式統計組件（定義在文件頂部，確保作用域正確）
+function PaymentMethodStats({ players, entryFee }: PaymentMethodStatsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   
   const calculateByPaymentMethod = (method: PaymentMethod) => {
@@ -95,6 +95,11 @@ function PaymentMethodStats({ players, entryFee }: { players: Player[]; entryFee
       )}
     </div>
   );
+}
+
+interface TournamentViewProps {
+  tournamentId: string;
+  onBack: () => void;
 }
 
 export default function TournamentView({ tournamentId, onBack }: TournamentViewProps) {
