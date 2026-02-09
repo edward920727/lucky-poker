@@ -142,7 +142,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
   const entryFee = useMemo(() => {
     if (!tournament) return 0;
     if (tournament.tournamentType === 'custom' && tournament.customConfig) {
-      return tournament.customConfig.entryFee;
+      return tournament.customConfig?.entryFee || 0;
     }
     return parseInt(tournament.tournamentType);
   }, [tournament]);
@@ -218,7 +218,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
     
     // 重新計算總獎池
     const entryFee = tournament.tournamentType === 'custom' && tournament.customConfig
-      ? tournament.customConfig.entryFee
+      ? (tournament.customConfig?.entryFee || 0)
       : parseInt(tournament.tournamentType);
     const totalBuyIn = editedPlayers.reduce((sum, p) => {
       return sum + (p.buyInCount * entryFee);
@@ -340,8 +340,12 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
 
     const isCustom = tournament.tournamentType === 'custom' && tournament.customConfig;
     const config = isCustom && tournament.customConfig
-      ? { name: tournament.customConfig.name, startChip: tournament.customConfig.startChip }
+      ? { name: tournament.customConfig?.name || '', startChip: tournament.customConfig?.startChip || 0 }
       : TOURNAMENT_TYPES[tournament.tournamentType as keyof typeof TOURNAMENT_TYPES];
+    if (!config) {
+      alert('無法獲取賽事配置');
+      return;
+    }
     const history = PLAYER_HISTORY_DB[newMemberId.trim()] || [];
     const newPlayer: Player = {
       id: Date.now().toString(),
@@ -392,8 +396,23 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
 
   const isCustom = tournament.tournamentType === 'custom' && tournament.customConfig;
   const config = isCustom && tournament.customConfig
-    ? { name: tournament.customConfig.name, startChip: tournament.customConfig.startChip }
+    ? { name: tournament.customConfig?.name || '', startChip: tournament.customConfig?.startChip || 0 }
     : TOURNAMENT_TYPES[tournament.tournamentType as keyof typeof TOURNAMENT_TYPES];
+  if (!config) {
+    return (
+      <div className="min-h-screen p-4 md:p-6 bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-xl mb-4">無法獲取賽事配置</p>
+          <button
+            onClick={onBack}
+            className="px-6 py-3 bg-white hover:bg-gray-100 text-black rounded-lg border-2 border-white transition-all duration-200"
+          >
+            返回首頁
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const formatDate = (dateString: string) => {
     const dateStr = formatTaiwanDate(dateString, {
@@ -506,7 +525,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                     <p className="text-2xl font-bold text-white">
                       NT$ {editedPlayers.reduce((sum, p) => {
                         const entryFee = tournament.tournamentType === 'custom' && tournament.customConfig
-                          ? tournament.customConfig.entryFee
+                          ? (tournament.customConfig?.entryFee || 0)
                           : parseInt(tournament.tournamentType);
                         return sum + (p.buyInCount * entryFee);
                       }, 0).toLocaleString()}
@@ -542,7 +561,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                     <p className="text-2xl font-bold text-poker-gold-300">
                       NT$ {(() => {
                         const entryFee = tournament.tournamentType === 'custom' && tournament.customConfig
-                          ? tournament.customConfig.entryFee
+                          ? (tournament.customConfig?.entryFee || 0)
                           : parseInt(tournament.tournamentType);
                         const administrativeFee = tournament.administrativeFee || 0;
                         const totalGroups = editedPlayers.reduce((sum, p) => sum + p.buyInCount, 0);

@@ -23,7 +23,7 @@ interface GroupedTournaments {
   totalDeduction: number; // 该日期总提拨金额（如果有记录）
 }
 
-export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onOpenUserManagement, onViewAllTournaments, onQuickEdit }: IndexPageProps) {
+export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onOpenUserManagement, onViewAllTournaments }: IndexPageProps) {
   const [tournaments, setTournaments] = useState<TournamentRecord[]>([]);
   const [showAuditLog, setShowAuditLog] = useState(false);
   const [showMemberQuery, setShowMemberQuery] = useState(false);
@@ -672,8 +672,8 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
                         <span className="font-mono font-bold text-lg text-poker-gold-300">
                           會編 {player.memberId}
                         </span>
-                        {player.name && (
-                          <span className="ml-2 text-sm text-gray-400">{player.name}</span>
+                        {(player as any).name && (
+                          <span className="ml-2 text-sm text-gray-400">{(player as any).name}</span>
                         )}
                       </div>
                       <span className="text-xs text-gray-400">買入 {player.buyInCount} 組</span>
