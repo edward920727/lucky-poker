@@ -460,13 +460,35 @@ export function setupUsersRealtimeSync(
       
       // 通知組件更新
       onUpdate(users);
-    }, (error) => {
-      console.error('實時同步錯誤:', error);
+    }, (error: any) => {
+      // 處理權限錯誤（通常是安全規則問題）
+      if (error?.code === 'permission-denied' || error?.code === 7) {
+        console.warn('Firestore 權限被拒絕，請檢查安全規則。將使用本地存儲模式。');
+        console.warn('提示：請在 Firebase Console 中將 users 集合的安全規則設置為 allow read, write: if true;');
+        // 嘗試一次性加載數據作為備份
+        getAllUsersAsync().then(users => {
+          if (users.length > 0) {
+            onUpdate(users);
+          }
+        }).catch(() => {
+          // 如果也失敗，使用本地數據
+          const localUsers = getAllUsersLocal();
+          onUpdate(localUsers);
+        });
+      } else {
+        console.error('實時同步錯誤:', error);
+        // 對於其他錯誤，也嘗試使用本地數據
+        const localUsers = getAllUsersLocal();
+        onUpdate(localUsers);
+      }
     });
 
     return unsubscribe;
   } catch (error) {
     console.error('設置實時同步失敗:', error);
+    // 發生錯誤時，使用本地數據
+    const localUsers = getAllUsersLocal();
+    onUpdate(localUsers);
     return () => {};
   }
 }

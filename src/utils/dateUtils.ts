@@ -168,20 +168,21 @@ export function parseTaiwanDate(dateInput: string | Date | any): Date {
         minutes = m || 0;
         seconds = s || 0;
       }
-      // 創建台灣時區的日期（使用 Date 構造函數，它會使用本地時區）
-      // 但我們需要確保日期是正確的台灣時區時間
-      // 使用 Intl API 來正確處理
-      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-      // 創建一個臨時日期來獲取台灣時區的 UTC 偏移
-      const tempDate = new Date();
-      const taiwanOffset = 8 * 60; // 台灣 UTC+8，以分鐘為單位
-      const localOffset = tempDate.getTimezoneOffset(); // 本地時區偏移（分鐘）
-      const offsetDiff = taiwanOffset + localOffset; // 需要調整的分鐘數
       
-      // 創建本地日期對象
-      const localDate = new Date(`${dateStr}Z`); // 先當作 UTC
-      // 調整到台灣時區
-      return new Date(localDate.getTime() - (offsetDiff * 60 * 1000));
+      // 正確處理台灣時區：將台灣時區時間轉換為 UTC 時間
+      // 台灣是 UTC+8，所以：台灣時間 = UTC時間 + 8小時
+      // 因此：UTC時間 = 台灣時間 - 8小時
+      // Date 對象內部存儲 UTC 時間，所以我們需要將台灣時區時間減去 8 小時
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      
+      // 先將字符串當作 UTC 時間創建 Date 對象
+      const utcDate = new Date(`${dateStr}Z`);
+      
+      // 然後減去 8 小時（台灣時區偏移），得到正確的 UTC 時間
+      // 這樣當使用 toLocaleTimeString 指定台灣時區時，會正確顯示為原始時間
+      const taiwanOffsetMs = 8 * 60 * 60 * 1000; // 8小時的毫秒數
+      const correctUtcTime = utcDate.getTime() - taiwanOffsetMs;
+      return new Date(correctUtcTime);
     }
   }
   // 如果已經有時區信息，直接解析

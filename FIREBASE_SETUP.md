@@ -49,17 +49,19 @@ VITE_FIREBASE_APP_ID=your-app-id
 
 ### 5. 設置 Firestore 安全規則（重要！）
 
+**重要提示**：本應用使用自定義身份驗證系統（非 Firebase Authentication），因此安全規則必須允許未認證的訪問。
+
 1. 在 Firebase Console 中，點擊「Firestore Database」
 2. 點擊「規則」標籤
-3. 將以下規則複製進去：
+3. 將以下規則複製進去（**必須使用此規則，否則會出現 400 錯誤**）：
 
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 允許讀寫 tournaments 集合（僅限已登入用戶）
+    // 允許讀寫 tournaments 集合（本應用使用自定義身份驗證）
     match /tournaments/{tournamentId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
     // 允許讀寫 users 集合（帳號管理同步）
     match /users/{userId} {
@@ -69,21 +71,16 @@ service cloud.firestore {
 }
 ```
 
-**注意**：如果您希望任何人都可以訪問（不推薦用於生產環境），可以使用：
+**為什麼需要 `if true`？**
+- 本應用使用 localStorage 進行身份驗證，不使用 Firebase Authentication
+- 如果規則要求 `request.auth != null`，會導致所有請求被拒絕（出現 400 Bad Request 錯誤）
+- 應用層面的安全由自定義登入系統保護
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /tournaments/{tournamentId} {
-      allow read, write: if true;
-    }
-    match /users/{userId} {
-      allow read, write: if true;
-    }
-  }
-}
-```
+**安全建議**：
+- 如果您的應用需要更嚴格的安全控制，可以考慮：
+  1. 實施 Firebase Authentication 並更新安全規則
+  2. 使用 Cloud Functions 作為中間層進行驗證
+  3. 限制 API 密鑰的使用範圍
 
 ### 6. 重新構建項目
 
@@ -119,10 +116,28 @@ npm run build
 
 ## 故障排除
 
+### 問題：出現 400 Bad Request 錯誤
+
+這通常是 Firestore 安全規則配置不正確導致的。解決方法：
+
+1. **檢查安全規則**：確保規則允許未認證訪問
+   - 打開 Firebase Console → Firestore Database → 規則
+   - 確認 tournaments 和 users 集合都使用 `allow read, write: if true;`
+   - 點擊「發布」保存規則
+
+2. **檢查控制台錯誤**：
+   - 打開瀏覽器開發者工具（F12）
+   - 查看 Console 標籤中的錯誤信息
+   - 如果看到「權限被拒絕」或「permission-denied」，說明安全規則需要更新
+
+3. **驗證配置**：
+   - 確認 Firebase 配置正確（projectId、apiKey 等）
+   - 確認 Firestore 數據庫已啟用
+
 ### 問題：數據沒有同步
 
 1. 檢查 `.env` 文件是否正確配置
-2. 檢查 Firestore 安全規則是否允許讀寫
+2. 檢查 Firestore 安全規則是否允許讀寫（必須使用 `if true`）
 3. 檢查瀏覽器控制台是否有錯誤信息
 4. 確認網絡連接正常
 

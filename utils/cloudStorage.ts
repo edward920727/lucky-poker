@@ -197,60 +197,189 @@ function firestoreToTournament(data: any): TournamentRecord {
   
   try {
     if (data.date && typeof data.date === 'object') {
-      // 如果是 Firestore Timestamp
-      if (data.date.toDate) {
-        const date = data.date.toDate();
-        if (isNaN(date.getTime())) {
-          console.warn('無效的 Firestore Timestamp，使用當前日期');
-          dateString = new Date().toISOString();
+      let date: Date | null = null;
+      
+      // 檢查是否為 Firestore Timestamp（有多種可能的格式）
+      // 優先檢查標準 Firestore Timestamp 對象
+      if (data.date.toDate && typeof data.date.toDate === 'function') {
+        try {
+          date = data.date.toDate();
+        } catch (e) {
+          console.warn('無法調用 toDate() 方法:', e);
+        }
+      }
+      // 檢查是否有 toMillis 方法
+      else if (data.date.toMillis && typeof data.date.toMillis === 'function') {
+        try {
+          date = new Date(data.date.toMillis());
+        } catch (e) {
+          console.warn('無法調用 toMillis() 方法:', e);
+        }
+      }
+      // 檢查是否為序列化的 Firestore Timestamp（包含 seconds）
+      else if ('seconds' in data.date || '_seconds' in data.date || 
+               data.date.seconds !== undefined || data.date._seconds !== undefined) {
+        const seconds = data.date.seconds || data.date._seconds || 
+                       (data.date as any).seconds || (data.date as any)._seconds || 0;
+        const nanoseconds = data.date.nanoseconds || data.date._nanoseconds || 
+                           (data.date as any).nanoseconds || (data.date as any)._nanoseconds || 0;
+        date = new Date(seconds * 1000 + nanoseconds / 1000000);
+      }
+      // 檢查是否為 Date 對象
+      else if (data.date instanceof Date) {
+        date = data.date;
+      }
+      // 檢查是否有 valueOf 方法（某些日期對象）
+      else if (typeof data.date.valueOf === 'function') {
+        try {
+          const timestamp = data.date.valueOf();
+          date = new Date(timestamp);
+        } catch (e) {
+          console.warn('無法調用 valueOf() 方法:', e);
+        }
+      }
+      // 檢查是否有 getTime 方法
+      else if (typeof data.date.getTime === 'function') {
+        try {
+          const timestamp = data.date.getTime();
+          date = new Date(timestamp);
+        } catch (e) {
+          console.warn('無法調用 getTime() 方法:', e);
+        }
+      }
+      
+      // 如果成功獲取日期，進行格式化
+      if (date && !isNaN(date.getTime())) {
+        // 使用 getTaiwanDateTime 的邏輯來確保格式一致
+        const formatter = new Intl.DateTimeFormat('zh-TW', {
+          timeZone: 'Asia/Taipei',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        });
+        const parts = formatter.formatToParts(date);
+        const year = parts.find(p => p.type === 'year')?.value || '';
+        const month = parts.find(p => p.type === 'month')?.value || '';
+        const day = parts.find(p => p.type === 'day')?.value || '';
+        const hour = parts.find(p => p.type === 'hour')?.value || '';
+        const minute = parts.find(p => p.type === 'minute')?.value || '';
+        const second = parts.find(p => p.type === 'second')?.value || '';
+        
+        // 驗證所有部分都存在
+        if (!year || !month || !day || !hour || !minute || !second) {
+          console.warn('日期格式化部分缺失，使用備用方法');
+          // 使用備用方法：直接從 Date 對象獲取台灣時區時間
+          const yearNum = date.getFullYear();
+          const monthNum = date.getMonth() + 1;
+          const dayNum = date.getDate();
+          const hourNum = date.getHours();
+          const minuteNum = date.getMinutes();
+          const secondNum = date.getSeconds();
+          dateString = `${yearNum}-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}T${String(hourNum).padStart(2, '0')}:${String(minuteNum).padStart(2, '0')}:${String(secondNum).padStart(2, '0')}`;
         } else {
-          // 使用 getTaiwanDateTime 的邏輯來確保格式一致
-          // 導入 getTaiwanDateTime 函數（但這裡不能直接導入，所以使用相同的邏輯）
-          const formatter = new Intl.DateTimeFormat('zh-TW', {
-            timeZone: 'Asia/Taipei',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false,
-          });
-          const parts = formatter.formatToParts(date);
-          const year = parts.find(p => p.type === 'year')?.value || '';
-          const month = parts.find(p => p.type === 'month')?.value || '';
-          const day = parts.find(p => p.type === 'day')?.value || '';
-          const hour = parts.find(p => p.type === 'hour')?.value || '';
-          const minute = parts.find(p => p.type === 'minute')?.value || '';
-          const second = parts.find(p => p.type === 'second')?.value || '';
-          
-          // 驗證所有部分都存在
-          if (!year || !month || !day || !hour || !minute || !second) {
-            console.warn('日期格式化部分缺失，使用備用方法');
-            // 使用備用方法：直接從 Date 對象獲取台灣時區時間
-            const yearNum = date.getFullYear();
-            const monthNum = date.getMonth() + 1;
-            const dayNum = date.getDate();
-            const hourNum = date.getHours();
-            const minuteNum = date.getMinutes();
-            const secondNum = date.getSeconds();
-            dateString = `${yearNum}-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}T${String(hourNum).padStart(2, '0')}:${String(minuteNum).padStart(2, '0')}:${String(secondNum).padStart(2, '0')}`;
-          } else {
-            dateString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:${second.padStart(2, '0')}`;
-          }
-          
-          // 驗證結果是否有效
-          const testDate = new Date(dateString);
-          if (isNaN(testDate.getTime())) {
-            console.warn('生成的日期字符串無效，使用 ISO 格式:', dateString);
-            // 如果無效，使用 ISO 格式（移除時區信息）
-            dateString = date.toISOString().replace('Z', '').split('.')[0];
-          }
+          dateString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:${second.padStart(2, '0')}`;
+        }
+        
+        // 驗證結果是否有效
+        const testDate = new Date(dateString);
+        if (isNaN(testDate.getTime())) {
+          console.warn('生成的日期字符串無效，使用 ISO 格式:', dateString);
+          // 如果無效，使用 ISO 格式（移除時區信息）
+          dateString = date.toISOString().replace('Z', '').split('.')[0];
         }
       } else {
-        // 其他對象類型，嘗試轉換
-        console.warn('未知的日期對象類型，使用當前日期:', data.date);
-        dateString = getTaiwanDateTimeString();
+        // 無法識別的日期對象類型，嘗試更多方法
+        // 先嘗試直接轉換為 Date
+        try {
+          const possibleDate = new Date(data.date as any);
+          if (!isNaN(possibleDate.getTime())) {
+            date = possibleDate;
+          }
+        } catch (e) {
+          // 忽略錯誤，繼續嘗試其他方法
+        }
+        
+        // 如果還是無法識別，記錄詳細信息以便調試（僅在開發環境）
+        if (!date || isNaN(date.getTime())) {
+          const dateObjKeys = Object.keys(data.date || {});
+          const dateObjStr = JSON.stringify(data.date, null, 2);
+          
+          // 只在控制台顯示一次詳細信息，避免重複輸出
+          if (!(window as any).__dateConversionWarningShown) {
+            console.warn('未知的日期對象類型，嘗試其他方法。對象結構:', {
+              keys: dateObjKeys,
+              type: typeof data.date,
+              constructor: data.date?.constructor?.name,
+              hasToDate: typeof data.date?.toDate === 'function',
+              hasSeconds: 'seconds' in data.date || '_seconds' in data.date,
+              hasToMillis: typeof data.date?.toMillis === 'function',
+              hasGetTime: typeof data.date?.getTime === 'function',
+              hasValueOf: typeof data.date?.valueOf === 'function',
+              stringified: dateObjStr.substring(0, 200) // 限制長度
+            });
+            (window as any).__dateConversionWarningShown = true;
+          }
+          
+          // 最後嘗試：檢查對象的所有屬性，尋找可能的時間戳
+          let foundTimestamp = false;
+          for (const key in data.date) {
+            if (key.toLowerCase().includes('second') || key.toLowerCase().includes('time') || key.toLowerCase().includes('stamp')) {
+              const value = (data.date as any)[key];
+              if (typeof value === 'number' && value > 1000000000) { // 可能是時間戳
+                try {
+                  date = new Date(value * (value < 1000000000000 ? 1000 : 1)); // 支持秒和毫秒
+                  if (!isNaN(date.getTime())) {
+                    foundTimestamp = true;
+                    break;
+                  }
+                } catch (e) {
+                  // 繼續嘗試
+                }
+              }
+            }
+          }
+          
+          // 如果所有方法都失敗，使用當前日期
+          if (!foundTimestamp && (!date || isNaN(date.getTime()))) {
+            dateString = getTaiwanDateTimeString();
+          } else if (date && !isNaN(date.getTime())) {
+            // 如果成功獲取日期，進行格式化（使用與上面相同的格式化邏輯）
+            const formatter = new Intl.DateTimeFormat('zh-TW', {
+              timeZone: 'Asia/Taipei',
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false,
+            });
+            const parts = formatter.formatToParts(date);
+            const year = parts.find(p => p.type === 'year')?.value || '';
+            const month = parts.find(p => p.type === 'month')?.value || '';
+            const day = parts.find(p => p.type === 'day')?.value || '';
+            const hour = parts.find(p => p.type === 'hour')?.value || '';
+            const minute = parts.find(p => p.type === 'minute')?.value || '';
+            const second = parts.find(p => p.type === 'second')?.value || '';
+            
+            if (!year || !month || !day || !hour || !minute || !second) {
+              dateString = getTaiwanDateTimeString(date);
+            } else {
+              dateString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:${second.padStart(2, '0')}`;
+            }
+          } else {
+            dateString = getTaiwanDateTimeString();
+          }
+        } else if (date && !isNaN(date.getTime())) {
+          // 如果通過直接轉換成功獲取日期，進行格式化
+          dateString = getTaiwanDateTimeString(date);
+        } else {
+          dateString = getTaiwanDateTimeString();
+        }
       }
     } else if (typeof data.date === 'string') {
       // 如果已經是字符串，驗證格式
@@ -428,13 +557,40 @@ export function setupRealtimeSync(
       
       // 通知組件更新
       onUpdate(tournaments);
-    }, (error) => {
-      console.error('實時同步錯誤:', error);
+    }, (error: any) => {
+      // 處理權限錯誤（通常是安全規則問題）
+      if (error?.code === 'permission-denied' || error?.code === 7) {
+        console.warn('Firestore 權限被拒絕，請檢查安全規則。將使用本地存儲模式。');
+        console.warn('提示：請在 Firebase Console 中將 tournaments 集合的安全規則設置為 allow read, write: if true;');
+        // 嘗試一次性加載數據作為備份
+        getAllTournamentsAsync().then(tournaments => {
+          if (tournaments.length > 0) {
+            onUpdate(tournaments);
+          }
+        }).catch(() => {
+          // 如果也失敗，使用本地數據
+          const localTournaments = getAllTournamentsLocal();
+          onUpdate(localTournaments);
+        });
+      } else if (error?.code === 'failed-precondition' || error?.code === 9) {
+        console.warn('Firestore 查詢需要索引。請在 Firebase Console 中創建所需的索引。');
+        console.warn('將使用本地存儲模式。');
+        const localTournaments = getAllTournamentsLocal();
+        onUpdate(localTournaments);
+      } else {
+        console.error('實時同步錯誤:', error);
+        // 對於其他錯誤，也嘗試使用本地數據
+        const localTournaments = getAllTournamentsLocal();
+        onUpdate(localTournaments);
+      }
     });
 
     return unsubscribe;
   } catch (error) {
     console.error('設置實時同步失敗:', error);
+    // 發生錯誤時，使用本地數據
+    const localTournaments = getAllTournamentsLocal();
+    onUpdate(localTournaments);
     return () => {};
   }
 }
