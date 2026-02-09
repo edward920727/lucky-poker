@@ -9,6 +9,21 @@
  */
 export function getTaiwanDateTime(): string {
   const now = new Date();
+  
+  // 驗證當前日期是否有效
+  if (isNaN(now.getTime())) {
+    console.error('系統日期無效，使用備用方法');
+    // 如果系統日期無效，使用 UTC 時間
+    const utcNow = new Date(Date.now());
+    const year = utcNow.getUTCFullYear();
+    const month = String(utcNow.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(utcNow.getUTCDate()).padStart(2, '0');
+    const hour = String(utcNow.getUTCHours() + 8).padStart(2, '0'); // UTC+8
+    const minute = String(utcNow.getUTCMinutes()).padStart(2, '0');
+    const second = String(utcNow.getUTCSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+  }
+  
   // 使用 Intl API 獲取台灣時區的日期時間
   const formatter = new Intl.DateTimeFormat('zh-TW', {
     timeZone: 'Asia/Taipei',
@@ -29,6 +44,19 @@ export function getTaiwanDateTime(): string {
   const minute = parts.find(p => p.type === 'minute')?.value || '';
   const second = parts.find(p => p.type === 'second')?.value || '';
   
+  // 驗證所有部分都存在
+  if (!year || !month || !day || !hour || !minute || !second) {
+    console.error('日期格式化失敗，部分缺失:', { year, month, day, hour, minute, second });
+    // 使用備用方法
+    const yearNum = now.getFullYear();
+    const monthNum = now.getMonth() + 1;
+    const dayNum = now.getDate();
+    const hourNum = now.getHours();
+    const minuteNum = now.getMinutes();
+    const secondNum = now.getSeconds();
+    return `${yearNum}-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}T${String(hourNum).padStart(2, '0')}:${String(minuteNum).padStart(2, '0')}:${String(secondNum).padStart(2, '0')}`;
+  }
+  
   // 確保月份和日期是兩位數（雖然 formatToParts 應該已經處理了，但為了安全起見）
   const monthPadded = month.padStart(2, '0');
   const dayPadded = day.padStart(2, '0');
@@ -36,17 +64,48 @@ export function getTaiwanDateTime(): string {
   const minutePadded = minute.padStart(2, '0');
   const secondPadded = second.padStart(2, '0');
   
-  return `${year}-${monthPadded}-${dayPadded}T${hourPadded}:${minutePadded}:${secondPadded}`;
+  const result = `${year}-${monthPadded}-${dayPadded}T${hourPadded}:${minutePadded}:${secondPadded}`;
+  
+  // 最終驗證結果是否有效
+  const testDate = new Date(result);
+  if (isNaN(testDate.getTime())) {
+    console.error('生成的日期字符串無效:', result);
+    // 使用 ISO 字符串作為最後的備用方案
+    return now.toISOString().replace('Z', '').split('.')[0];
+  }
+  
+  return result;
 }
 
 /**
  * 獲取台灣時區的今天日期字符串
  * 格式：YYYY-MM-DD
+ * 確保只返回日期部分，不包含時間
  */
 export function getTaiwanTodayDateKey(): string {
   // 使用 getTaiwanDateTime 並提取日期部分，確保一致性
   const dateTime = getTaiwanDateTime();
-  return getDateKey(dateTime);
+  const dateKey = getDateKey(dateTime);
+  
+  // 驗證結果格式（應該是 YYYY-MM-DD）
+  if (!dateKey || dateKey === 'Invalid Date' || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    console.warn('getTaiwanTodayDateKey 返回無效格式，使用備用方法:', dateKey);
+    // 使用備用方法：直接從當前日期獲取
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('zh-TW', {
+      timeZone: 'Asia/Taipei',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const parts = formatter.formatToParts(now);
+    const year = parts.find(p => p.type === 'year')?.value || '';
+    const month = parts.find(p => p.type === 'month')?.value || '';
+    const day = parts.find(p => p.type === 'day')?.value || '';
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  
+  return dateKey;
 }
 
 /**
@@ -63,17 +122,37 @@ export function parseTaiwanDate(dateInput: string | Date | any): Date {
   }
   
   if (dateInput instanceof Date) {
-    // 如果是 Date 對象，轉換為 ISO 字符串
-    dateString = dateInput.toISOString();
+    // 如果是 Date 對象，檢查是否有效
+    if (isNaN(dateInput.getTime())) {
+      console.warn('無效的 Date 對象，使用當前日期');
+      return new Date();
+    }
+    return dateInput;
   } else if (typeof dateInput === 'object' && dateInput.toDate) {
-    // 如果是 Firestore Timestamp，轉換為 Date 然後轉為字符串
-    dateString = dateInput.toDate().toISOString();
+    // 如果是 Firestore Timestamp，轉換為 Date
+    try {
+      const date = dateInput.toDate();
+      if (isNaN(date.getTime())) {
+        console.warn('無效的 Timestamp，使用當前日期');
+        return new Date();
+      }
+      return date;
+    } catch (e) {
+      console.warn('Timestamp 轉換失敗，使用當前日期:', e);
+      return new Date();
+    }
   } else if (typeof dateInput === 'string') {
     // 如果已經是字符串，直接使用
     dateString = dateInput;
   } else {
     // 其他情況，嘗試轉換為字符串
     dateString = String(dateInput);
+  }
+  
+  // 檢查字符串是否為空或無效
+  if (!dateString || dateString.trim() === '' || dateString === 'Invalid Date') {
+    console.warn('無效的日期字符串，使用當前日期:', dateString);
+    return new Date();
   }
   
   // 如果日期字符串不包含時區信息，假設它是台灣時區
@@ -106,7 +185,17 @@ export function parseTaiwanDate(dateInput: string | Date | any): Date {
     }
   }
   // 如果已經有時區信息，直接解析
-  return new Date(dateString);
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      console.warn('日期解析失敗，使用當前日期:', dateString);
+      return new Date();
+    }
+    return date;
+  } catch (e) {
+    console.warn('日期解析異常，使用當前日期:', e, dateString);
+    return new Date();
+  }
 }
 
 /**
@@ -124,17 +213,43 @@ export function getDateKey(dateInput: string | Date | any): string {
   }
   
   if (dateInput instanceof Date) {
-    // 如果是 Date 對象，轉換為 ISO 字符串
+    // 如果是 Date 對象，檢查是否有效
+    if (isNaN(dateInput.getTime())) {
+      console.warn('無效的 Date 對象，使用今天的日期');
+      return getTaiwanTodayDateKey();
+    }
     dateString = dateInput.toISOString();
   } else if (typeof dateInput === 'object' && dateInput.toDate) {
     // 如果是 Firestore Timestamp，轉換為 Date 然後轉為字符串
-    dateString = dateInput.toDate().toISOString();
+    try {
+      const date = dateInput.toDate();
+      if (isNaN(date.getTime())) {
+        console.warn('無效的 Timestamp，使用今天的日期');
+        return getTaiwanTodayDateKey();
+      }
+      dateString = date.toISOString();
+    } catch (e) {
+      console.warn('Timestamp 轉換失敗，使用今天的日期:', e);
+      return getTaiwanTodayDateKey();
+    }
   } else if (typeof dateInput === 'string') {
     // 如果已經是字符串，直接使用
     dateString = dateInput;
   } else {
     // 其他情況，嘗試轉換為字符串
     dateString = String(dateInput);
+  }
+  
+  // 檢查字符串是否為空或無效
+  if (!dateString || dateString.trim() === '' || dateString === 'Invalid Date') {
+    console.warn('無效的日期字符串，使用今天的日期:', dateString);
+    return getTaiwanTodayDateKey();
+  }
+  
+  // 確保 dateString 是字符串類型
+  if (typeof dateString !== 'string') {
+    console.warn('dateString 不是字符串類型，轉換為字符串:', dateString);
+    dateString = String(dateString);
   }
   
   // 如果包含時區信息（UTC 或帶時區偏移），需要轉換為台灣時區

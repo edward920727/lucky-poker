@@ -31,7 +31,17 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
 
   const loadTournaments = () => {
     const records = getAllTournaments();
-    setTournaments(records);
+    // 確保賽事按日期和時間倒序排列（最新的在前）
+    const sortedRecords = [...records].sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      // 如果日期相同，按 ID 倒序（ID 是時間戳，越大越新）
+      if (dateA === dateB) {
+        return parseInt(b.id) - parseInt(a.id);
+      }
+      return dateB - dateA;
+    });
+    setTournaments(sortedRecords);
     // 預設不展開任何日期
     setExpandedDates(new Set());
   };
@@ -115,25 +125,49 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
     });
 
     tournaments.forEach((tournament) => {
+      // 跳過無效的賽事日期
+      if (!tournament.date) {
+        console.warn('跳過無日期欄位的賽事:', tournament.tournamentName);
+        return;
+      }
+      
       const dateKey = getDateKey(tournament.date);
       
-      // 只處理今天的賽事（使用字符串直接比較，避免時區問題）
+      // 跳過無效的日期鍵
+      if (!dateKey || dateKey === 'Invalid Date' || dateKey.trim() === '' || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+        console.warn('跳過無效日期的賽事:', tournament.tournamentName, '日期鍵:', dateKey, '原始日期:', tournament.date);
+        return;
+      }
+      
+      // 只處理今天的賽事（使用字符串直接比較 YYYY-MM-DD，避免時區問題）
       if (dateKey !== todayKey) {
         return;
       }
       
       // 調試：匹配成功
-      console.log(`[今日賽事篩選] ✓ 匹配成功: ${tournament.tournamentName}, 日期=${dateKey}`);
+      console.log(`[今日賽事篩選] ✓ 匹配成功: ${tournament.tournamentName}, 日期鍵=${dateKey}, 原始日期=${tournament.date}`);
       
       if (!grouped[dateKey]) {
-        grouped[dateKey] = {
-          date: dateKey,
-          displayDate: formatDateFull(tournament.date),
-          tournaments: [],
-          totalBuyInGroups: 0,
-          totalBuyIn: 0,
-          totalDeduction: 0,
-        };
+        try {
+          grouped[dateKey] = {
+            date: dateKey,
+            displayDate: formatDateFull(tournament.date),
+            tournaments: [],
+            totalBuyInGroups: 0,
+            totalBuyIn: 0,
+            totalDeduction: 0,
+          };
+        } catch (e) {
+          console.warn('格式化日期失敗，使用默認格式:', e, tournament.date);
+          grouped[dateKey] = {
+            date: dateKey,
+            displayDate: dateKey, // 如果格式化失敗，直接使用日期鍵
+            tournaments: [],
+            totalBuyInGroups: 0,
+            totalBuyIn: 0,
+            totalDeduction: 0,
+          };
+        }
       }
 
       grouped[dateKey].tournaments.push(tournament);
@@ -141,6 +175,20 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
       grouped[dateKey].totalBuyIn += tournament.totalBuyIn;
       // 如果有提拨金额字段，累加（目前 TournamentRecord 没有这个字段，先设为0）
       // grouped[dateKey].totalDeduction += (tournament as any).deduction || 0;
+    });
+
+    // 對每個日期的賽事按時間倒序排列（最新的在前）
+    Object.keys(grouped).forEach(dateKey => {
+      grouped[dateKey].tournaments.sort((a, b) => {
+        // 按日期時間倒序排列（最新的在前）
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        // 如果日期相同，按 ID 倒序（ID 是時間戳，越大越新）
+        if (dateA === dateB) {
+          return parseInt(b.id) - parseInt(a.id);
+        }
+        return dateB - dateA;
+      });
     });
 
     // 转换为数组并按日期倒序排列
@@ -267,9 +315,12 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
           {onQuickEdit && filteredGroups.length > 0 && filteredGroups[0].tournaments.length > 0 && (
             <button
               onClick={() => {
-                // 獲取今日最近一場比賽
-                const latestTournament = filteredGroups[0].tournaments[0];
-                onQuickEdit(latestTournament.id);
+                // 獲取今日最近一場比賽（已經按時間倒序排列，第一個就是最新的）
+                const todayGroup = filteredGroups[0];
+                if (todayGroup && todayGroup.tournaments.length > 0) {
+                  const latestTournament = todayGroup.tournaments[0];
+                  onQuickEdit(latestTournament.id);
+                }
               }}
               className="md:hidden group relative bg-gradient-to-r from-poker-gold-600 to-poker-gold-700 hover:from-poker-gold-700 hover:to-poker-gold-800 text-white font-bold py-6 px-12 rounded-2xl text-2xl shadow-2xl transform hover:scale-105 transition-all duration-300 flex items-center gap-4 overflow-hidden border-2 border-poker-gold-500"
             >

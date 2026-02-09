@@ -160,8 +160,17 @@ export default function TournamentDashboard({
       tournamentName = `${config.name}#${tournamentNumber}`;
     }
 
-    // 使用台灣時區生成日期字符串
+    // 使用台灣時區生成日期字符串（getTaiwanDateTime 已包含驗證邏輯）
     const taiwanDateTime = getTaiwanDateTime();
+    
+    // 驗證日期格式是否有效（getTaiwanDateTime 應該總是返回有效日期，這裡只是雙重檢查）
+    const testDate = new Date(taiwanDateTime);
+    if (isNaN(testDate.getTime())) {
+      console.error('生成的日期無效，這不應該發生:', taiwanDateTime);
+      // 如果確實無效，使用 ISO 格式作為最後備用
+      const fallbackDate = new Date().toISOString().replace('Z', '').split('.')[0];
+      console.warn('使用備用日期:', fallbackDate);
+    }
 
     const tournamentRecord: TournamentRecord = {
       id: Date.now().toString(),

@@ -69,15 +69,33 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
     tournaments.forEach((tournament) => {
       const dateKey = getDateKey(tournament.date);
       
+      // 跳過無效的日期鍵
+      if (!dateKey || dateKey === 'Invalid Date' || dateKey.trim() === '') {
+        console.warn('跳過無效日期的賽事:', tournament.tournamentName, tournament.date);
+        return;
+      }
+      
       if (!grouped[dateKey]) {
-        grouped[dateKey] = {
-          date: dateKey,
-          displayDate: formatDateFull(tournament.date),
-          tournaments: [],
-          totalBuyInGroups: 0,
-          totalBuyIn: 0,
-          totalDeduction: 0,
-        };
+        try {
+          grouped[dateKey] = {
+            date: dateKey,
+            displayDate: formatDateFull(tournament.date),
+            tournaments: [],
+            totalBuyInGroups: 0,
+            totalBuyIn: 0,
+            totalDeduction: 0,
+          };
+        } catch (e) {
+          console.warn('格式化日期失敗，使用默認格式:', e, tournament.date);
+          grouped[dateKey] = {
+            date: dateKey,
+            displayDate: dateKey, // 如果格式化失敗，直接使用日期鍵
+            tournaments: [],
+            totalBuyInGroups: 0,
+            totalBuyIn: 0,
+            totalDeduction: 0,
+          };
+        }
       }
 
       grouped[dateKey].tournaments.push(tournament);
@@ -86,9 +104,17 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
     });
 
     // 转换为数组并按日期倒序排列
-    return Object.values(grouped).sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
+    return Object.values(grouped).sort((a, b) => {
+      try {
+        // 直接比較 YYYY-MM-DD 格式的字符串，避免時區問題
+        if (a.date > b.date) return -1;
+        if (a.date < b.date) return 1;
+        return 0;
+      } catch (e) {
+        console.warn('日期排序失敗:', e, a.date, b.date);
+        return 0;
+      }
+    });
   }, [tournaments]);
 
   // 应用搜索和日期范围筛选
