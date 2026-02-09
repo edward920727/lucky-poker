@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
-import { TournamentRecord } from '../../types/tournament';
-import { getAllTournaments, deleteTournament, setupRealtimeSyncForTournaments } from '../../utils/storage';
+import { TournamentRecord, TournamentStatus } from '../../types/tournament';
+import { getAllTournaments, deleteTournament, updateTournament, setupRealtimeSyncForTournaments, getTournamentById } from '../../utils/storage';
 import AuditLogPanel from './AuditLogPanel';
 import MemberPaymentQuery from './MemberPaymentQuery';
 import { getTaiwanTodayDateKey, getDateKey, formatTaiwanDate, getTaiwanDateTime, formatTaiwanTime } from '../utils/dateUtils';
@@ -28,6 +28,9 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
   const [showAuditLog, setShowAuditLog] = useState(false);
   const [showMemberQuery, setShowMemberQuery] = useState(false);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
+  const [quickEditTournament, setQuickEditTournament] = useState<TournamentRecord | null>(null);
+  const [editingChips, setEditingChips] = useState<Record<string, number>>({});
+  const [chipInputValues, setChipInputValues] = useState<Record<string, string>>({});
 
   const loadTournaments = () => {
     const records = getAllTournaments();
@@ -218,6 +221,100 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
     }
   };
 
+  const handleStatusChange = (tournamentId: string, newStatus: TournamentStatus, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const tournament = getTournamentById(tournamentId);
+    if (tournament) {
+      const updated: TournamentRecord = {
+        ...tournament,
+        status: newStatus,
+      };
+      updateTournament(updated);
+      loadTournaments();
+    }
+  };
+
+  const handleQuickEditClick = () => {
+    if (filteredGroups.length > 0 && filteredGroups[0].tournaments.length > 0) {
+      const latestTournament = filteredGroups[0].tournaments[0];
+      const fullTournament = getTournamentById(latestTournament.id);
+      if (fullTournament) {
+        setQuickEditTournament(fullTournament);
+        // 初始化编辑筹码值
+        const chips: Record<string, number> = {};
+        const inputValues: Record<string, string> = {};
+        fullTournament.players.forEach(p => {
+          const chipValue = p.currentChips || 0;
+          chips[p.id] = chipValue;
+          inputValues[p.id] = chipValue.toString();
+        });
+        setEditingChips(chips);
+        setChipInputValues(inputValues);
+      }
+    }
+  };
+
+  const handleChipInputChange = (playerId: string, value: string) => {
+    // 允许空字符串，用于删除所有内容
+    setChipInputValues(prev => ({
+      ...prev,
+      [playerId]: value,
+    }));
+  };
+
+  const handleChipBlur = (playerId: string) => {
+    if (!quickEditTournament) return;
+    
+    const inputValue = chipInputValues[playerId] || '';
+    const newChips = inputValue === '' ? 0 : parseFloat(inputValue) || 0;
+    
+    // 更新显示值（确保显示为数字）
+    setChipInputValues(prev => ({
+      ...prev,
+      [playerId]: newChips.toString(),
+    }));
+    
+    setEditingChips(prev => ({
+      ...prev,
+      [playerId]: newChips,
+    }));
+
+    // 更新比赛数据
+    const updatedPlayers = quickEditTournament.players.map(p =>
+      p.id === playerId ? { ...p, currentChips: newChips } : p
+    );
+
+    const actualTotalChips = updatedPlayers.reduce((sum, p) => sum + (p.currentChips || 0), 0);
+    
+    const updated: TournamentRecord = {
+      ...quickEditTournament,
+      players: updatedPlayers,
+      actualTotalChips,
+    };
+
+    updateTournament(updated);
+    setQuickEditTournament(updated);
+    loadTournaments();
+  };
+
+  const getStatusLabel = (status?: TournamentStatus): string => {
+    switch (status) {
+      case 'in_progress': return '進行中';
+      case 'completed': return '已完賽';
+      case 'cancelled': return '取消';
+      default: return '進行中';
+    }
+  };
+
+  const getStatusColor = (status?: TournamentStatus): string => {
+    switch (status) {
+      case 'in_progress': return 'bg-blue-600 border-blue-500 text-blue-200';
+      case 'completed': return 'bg-green-600 border-green-500 text-green-200';
+      case 'cancelled': return 'bg-red-600 border-red-500 text-red-200';
+      default: return 'bg-blue-600 border-blue-500 text-blue-200';
+    }
+  };
+
 
 
   return (
@@ -312,21 +409,14 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
           </button>
           
           {/* 手機版專屬：快速結算按鈕 */}
-          {onQuickEdit && filteredGroups.length > 0 && filteredGroups[0].tournaments.length > 0 && (
+          {filteredGroups.length > 0 && filteredGroups[0].tournaments.length > 0 && (
             <button
-              onClick={() => {
-                // 獲取今日最近一場比賽（已經按時間倒序排列，第一個就是最新的）
-                const todayGroup = filteredGroups[0];
-                if (todayGroup && todayGroup.tournaments.length > 0) {
-                  const latestTournament = todayGroup.tournaments[0];
-                  onQuickEdit(latestTournament.id);
-                }
-              }}
+              onClick={handleQuickEditClick}
               className="md:hidden group relative bg-gradient-to-r from-poker-gold-600 to-poker-gold-700 hover:from-poker-gold-700 hover:to-poker-gold-800 text-white font-bold py-6 px-12 rounded-2xl text-2xl shadow-2xl transform hover:scale-105 transition-all duration-300 flex items-center gap-4 overflow-hidden border-2 border-poker-gold-500"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20 transform -skew-x-12 group-hover:translate-x-full transition-all duration-1000"></div>
               <span className="text-4xl relative z-10">⚡</span>
-              <span className="relative z-10">快速結算/更碼</span>
+              <span className="relative z-10">快速更碼</span>
             </button>
           )}
           
@@ -457,7 +547,7 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
                             </div>
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                               <div className="flex-1 relative z-10">
-                                <div className="flex items-center gap-4 mb-3">
+                                <div className="flex items-center gap-4 mb-3 flex-wrap">
                                   <h4 className="text-xl font-display font-bold text-poker-gold-400 group-hover:text-poker-gold-300 transition-colors">
                                     {tournament.tournamentName}
                                   </h4>
@@ -467,6 +557,17 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
                                       minute: '2-digit',
                                     })}
                                   </span>
+                                  {/* 狀態選擇器 */}
+                                  <select
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => handleStatusChange(tournament.id, e.target.value as TournamentStatus, e as any)}
+                                    value={tournament.status || 'in_progress'}
+                                    className={`text-xs px-3 py-1 rounded-full border font-medium cursor-pointer ${getStatusColor(tournament.status || 'in_progress')}`}
+                                  >
+                                    <option value="in_progress">進行中</option>
+                                    <option value="completed">已完賽</option>
+                                    <option value="cancelled">取消</option>
+                                  </select>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                                   <div className="bg-blue-600 bg-opacity-20 px-3 py-2 rounded-lg border border-blue-500 border-opacity-30">
@@ -525,6 +626,103 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
       {/* 會員查詢面板 */}
       {showMemberQuery && (
         <MemberPaymentQuery onClose={() => setShowMemberQuery(false)} />
+      )}
+
+      {/* 快速更碼彈窗 */}
+      {quickEditTournament && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border-2 border-poker-gold-600">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-display font-bold text-poker-gold-400">
+                ⚡ 快速更碼 - {quickEditTournament.tournamentName}
+              </h2>
+              <button
+                onClick={() => {
+                  setQuickEditTournament(null);
+                  setEditingChips({});
+                  setChipInputValues({});
+                }}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* 比賽狀態顯示 */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm text-gray-400">比賽狀態：</span>
+                <span className={`text-sm px-3 py-1 rounded-full border font-medium ${getStatusColor(quickEditTournament.status || 'in_progress')}`}>
+                  {getStatusLabel(quickEditTournament.status || 'in_progress')}
+                </span>
+              </div>
+            </div>
+
+            {/* 只有進行中的比賽才顯示會員列表 */}
+            {(!quickEditTournament.status || quickEditTournament.status === 'in_progress') ? (
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-poker-gold-300 mb-3">會員編號列表</h3>
+                {quickEditTournament.players.map((player) => (
+                  <div
+                    key={player.id}
+                    className="bg-gray-800 rounded-xl p-4 border border-gray-700"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <span className="font-mono font-bold text-lg text-poker-gold-300">
+                          會編 {player.memberId}
+                        </span>
+                        {player.name && (
+                          <span className="ml-2 text-sm text-gray-400">{player.name}</span>
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-400">買入 {player.buyInCount} 組</span>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">當前碼量</label>
+                      <input
+                        type="tel"
+                        inputMode="decimal"
+                        value={chipInputValues[player.id] !== undefined ? chipInputValues[player.id] : (player.currentChips || 0).toString()}
+                        onChange={(e) => {
+                          // 允许输入数字、小数点、负号（但我们会过滤掉负号）
+                          const value = e.target.value.replace(/[^0-9.]/g, '');
+                          handleChipInputChange(player.id, value);
+                        }}
+                        onBlur={() => handleChipBlur(player.id)}
+                        className="w-full px-4 py-3 bg-gray-700 rounded-xl text-right text-xl font-bold text-white focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
+                        placeholder="0"
+                        pattern="[0-9]*"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <p className="text-lg mb-2">此比賽已{getStatusLabel(quickEditTournament.status)}</p>
+                <p className="text-sm">無法修改碼量</p>
+              </div>
+            )}
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => {
+                  // 确保所有输入框都保存
+                  quickEditTournament.players.forEach(player => {
+                    handleChipBlur(player.id);
+                  });
+                  setQuickEditTournament(null);
+                  setEditingChips({});
+                  setChipInputValues({});
+                }}
+                className="flex-1 bg-poker-gold-600 hover:bg-poker-gold-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200"
+              >
+                完成
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -14,6 +14,11 @@ export interface CustomTournamentConfig {
 }
 
 /**
+ * 比赛状态
+ */
+export type TournamentStatus = 'in_progress' | 'completed' | 'cancelled';
+
+/**
  * 赛事记录
  */
 export interface TournamentRecord {
@@ -21,6 +26,7 @@ export interface TournamentRecord {
   date: string; // 赛事日期 (ISO 格式)
   tournamentType: TournamentType | 'custom'; // 赛事类型
   tournamentName: string; // 赛事名称
+  status?: TournamentStatus; // 比赛状态：进行中、已完赛、取消（默认为进行中）
   totalPlayers: number; // 总人数
   totalBuyIn: number; // 总买入金额（總收入）
   administrativeFee?: number; // 行政費（每人）

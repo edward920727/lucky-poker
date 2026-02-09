@@ -177,6 +177,7 @@ export default function TournamentDashboard({
       date: taiwanDateTime,
       tournamentType: isCustom ? 'custom' : tournamentType,
       tournamentName: tournamentName as string,
+      status: 'in_progress', // 默認狀態為進行中
       totalPlayers: totalBuyInGroups, // 改為買入組數
       totalBuyIn, // 總收入
       administrativeFee: administrativeFeePerPerson, // 每人行政費
