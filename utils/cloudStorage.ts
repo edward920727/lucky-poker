@@ -96,6 +96,35 @@ function initFirebase(): boolean {
   }
 }
 
+/**
+ * 檢查是否為可忽略的網路錯誤（QUIC 協議錯誤等）
+ * 這些錯誤通常是非關鍵的，Firebase SDK 會自動重試
+ */
+function isIgnorableNetworkError(error: any): boolean {
+  if (!error) return false;
+  
+  // 檢查錯誤訊息中是否包含 QUIC 相關錯誤
+  const errorMessage = error.message || '';
+  const errorCode = error.code || '';
+  
+  // QUIC 協議錯誤（通常是網路層面的暫時性問題）
+  if (errorMessage.includes('QUIC') || 
+      errorMessage.includes('QUIC_PROTOCOL_ERROR') ||
+      errorMessage.includes('QUIC_PACKET_WRITE_ERROR')) {
+    return true;
+  }
+  
+  // 網路連接錯誤（Firebase SDK 會自動重試）
+  if (errorCode === 'unavailable' || 
+      errorCode === 'deadline-exceeded' ||
+      errorMessage.includes('network') ||
+      errorMessage.includes('NetworkError')) {
+    return true;
+  }
+  
+  return false;
+}
+
 // 轉換 TournamentRecord 為 Firestore 格式
 function tournamentToFirestore(tournament: TournamentRecord): any {
   // 確保日期是有效的
@@ -558,6 +587,12 @@ export function setupRealtimeSync(
       // 通知組件更新
       onUpdate(tournaments);
     }, (error: any) => {
+      // 忽略非關鍵的網路錯誤（QUIC 協議錯誤等，Firebase SDK 會自動重試）
+      if (isIgnorableNetworkError(error)) {
+        // 靜默處理，不顯示錯誤訊息
+        return;
+      }
+      
       // 處理權限錯誤（通常是安全規則問題）
       if (error?.code === 'permission-denied' || error?.code === 7) {
         console.warn('Firestore 權限被拒絕，請檢查安全規則。將使用本地存儲模式。');

@@ -142,7 +142,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
   const entryFee = useMemo(() => {
     if (!tournament) return 0;
     if (tournament.tournamentType === 'custom' && tournament.customConfig) {
-      return tournament.customConfig?.entryFee || 0;
+      return tournament.customConfig.entryFee || 0;
     }
     return parseInt(tournament.tournamentType);
   }, [tournament]);
@@ -217,8 +217,9 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
     const totalDeduction = totalDeductionNum;
     
     // 重新計算總獎池
-    const entryFee = tournament.tournamentType === 'custom' && tournament.customConfig
-      ? (tournament.customConfig?.entryFee || 0)
+    const customConfig = tournament.customConfig;
+    const entryFee = tournament.tournamentType === 'custom' && customConfig
+      ? (customConfig.entryFee || 0)
       : parseInt(tournament.tournamentType);
     const totalBuyIn = editedPlayers.reduce((sum, p) => {
       return sum + (p.buyInCount * entryFee);
@@ -396,8 +397,9 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
   }
 
   const isCustom = tournament.tournamentType === 'custom' && tournament.customConfig;
-  const config = isCustom && tournament.customConfig
-    ? { name: tournament.customConfig?.name || '', startChip: tournament.customConfig?.startChip || 0 }
+  const customConfig = tournament.customConfig;
+  const config = isCustom && customConfig
+    ? { name: customConfig.name || '', startChip: customConfig.startChip || 0 }
     : TOURNAMENT_TYPES[tournament.tournamentType as keyof typeof TOURNAMENT_TYPES];
   if (!config) {
     return (
@@ -525,8 +527,9 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                     <p className="text-sm text-gray-400 mb-2">總收入</p>
                     <p className="text-2xl font-bold text-white">
                       NT$ {editedPlayers.reduce((sum, p) => {
-                        const entryFee = tournament.tournamentType === 'custom' && tournament.customConfig
-                          ? (tournament.customConfig?.entryFee || 0)
+                        const customConfig = tournament.customConfig;
+                        const entryFee = tournament.tournamentType === 'custom' && customConfig
+                          ? (customConfig.entryFee || 0)
                           : parseInt(tournament.tournamentType);
                         return sum + (p.buyInCount * entryFee);
                       }, 0).toLocaleString()}
@@ -561,8 +564,9 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                     <p className="text-sm text-gray-400 mb-2">總獎池（預覽）</p>
                     <p className="text-2xl font-bold text-poker-gold-300">
                       NT$ {(() => {
-                        const entryFee = tournament.tournamentType === 'custom' && tournament.customConfig
-                          ? (tournament.customConfig?.entryFee || 0)
+                        const customConfig = tournament.customConfig;
+                        const entryFee = tournament.tournamentType === 'custom' && customConfig
+                          ? (customConfig.entryFee || 0)
                           : parseInt(tournament.tournamentType);
                         const administrativeFee = tournament.administrativeFee || 0;
                         const totalGroups = editedPlayers.reduce((sum, p) => sum + p.buyInCount, 0);
