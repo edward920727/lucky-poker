@@ -25,6 +25,7 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
   const [totalGroups, setTotalGroups] = useState<number>(0);
   const [isManualGroups, setIsManualGroups] = useState(false); // 是否手動設定總組數
   const [isManualEntryFee, setIsManualEntryFee] = useState(false); // 是否手動設定報名費
+  const [isManualTotalDeduction, setIsManualTotalDeduction] = useState(false); // 是否手動設定提撥獎金
   const [deduction, setDeduction] = useState<number>(defaultDeduction);
   const [totalDeduction, setTotalDeduction] = useState<number>(0); // 單場總提撥金
   const [topThreeSplit, setTopThreeSplit] = useState<[number, number, number]>([50, 30, 20]); // 前三名提撥獎金獲得比例
@@ -45,7 +46,9 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
       if (isCustom && customConfig) {
         setEntryFee(customConfig.entryFee);
         setDeduction(customConfig.administrativeFee);
-        setTotalDeduction(customConfig.totalDeduction || 0);
+        if (!isManualTotalDeduction) {
+          setTotalDeduction(customConfig.totalDeduction || 0);
+        }
         setTopThreeSplit(customConfig.topThreeSplit || [50, 30, 20]);
       } else if (tournamentType) {
         const newEntryFee = parseInt(tournamentType);
@@ -53,17 +56,19 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
         // 使用 ICM 獎勵結構自動獲取配置
         const autoDeduction = getAdministrativeFee(newEntryFee);
         setDeduction(autoDeduction);
-        const icmStructure = getICMRewardStructure(newEntryFee);
-        if (icmStructure) {
-          setTotalDeduction(icmStructure.totalDeduction);
-          setTopThreeSplit(icmStructure.topThreeSplit);
-        } else {
-          setTotalDeduction(0);
-          setTopThreeSplit([50, 30, 20]);
+        if (!isManualTotalDeduction) {
+          const icmStructure = getICMRewardStructure(newEntryFee);
+          if (icmStructure) {
+            setTotalDeduction(icmStructure.totalDeduction);
+            setTopThreeSplit(icmStructure.topThreeSplit);
+          } else {
+            setTotalDeduction(0);
+            setTopThreeSplit([50, 30, 20]);
+          }
         }
       }
     }
-  }, [tournamentType, customConfig, isManualEntryFee, isCustom]);
+  }, [tournamentType, customConfig, isManualEntryFee, isManualTotalDeduction, isCustom]);
 
   // 所有賽事都使用新的ICM計算邏輯
   // 第一步：總獎金池 = (單組報名費 - 行政費) × 總組數
@@ -244,6 +249,68 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
           {!isCustom && tournamentType && getAdministrativeFee(parseInt(tournamentType)) > 0 && (
             <p className="text-xs text-gray-500 mt-1">
               💡 根據 ICM 獎勵結構自動計算：報名費 {tournamentType} → 行政費 {getAdministrativeFee(parseInt(tournamentType))}
+            </p>
+          )}
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">單場總提撥金 (NT$)</label>
+          <div className="relative">
+            <input
+              type="number"
+              value={totalDeduction || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '' || value === null || value === undefined) {
+                  setTotalDeduction(0);
+                  setIsManualTotalDeduction(true);
+                  return;
+                }
+                const numValue = parseFloat(value);
+                if (!isNaN(numValue)) {
+                  setTotalDeduction(Math.max(0, numValue));
+                  setIsManualTotalDeduction(true);
+                }
+              }}
+              className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {!isCustom && tournamentType && (() => {
+              const icmStructure = getICMRewardStructure(parseInt(tournamentType));
+              return icmStructure && icmStructure.totalDeduction > 0 ? (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
+                  <span className="text-xs text-poker-gold-400">
+                    自動：{icmStructure.totalDeduction}
+                  </span>
+                  {isManualTotalDeduction && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTotalDeduction(icmStructure.totalDeduction);
+                        setIsManualTotalDeduction(false);
+                      }}
+                      className="text-xs text-blue-400 hover:text-blue-300 underline"
+                      title="恢復自動值"
+                    >
+                      恢復
+                    </button>
+                  )}
+                </div>
+              ) : null;
+            })()}
+          </div>
+          {!isCustom && tournamentType && (() => {
+            const icmStructure = getICMRewardStructure(parseInt(tournamentType));
+            return icmStructure && icmStructure.totalDeduction > 0 ? (
+              <p className="text-xs text-gray-500 mt-1">
+                💡 根據 ICM 獎勵結構自動計算：報名費 {tournamentType} → 單場總提撥 {icmStructure.totalDeduction}
+                {isManualTotalDeduction && (
+                  <span className="ml-2 text-orange-400">（已手動修改）</span>
+                )}
+              </p>
+            ) : null;
+          })()}
+          {isCustom && customConfig && customConfig.totalDeduction && (
+            <p className="text-xs text-gray-500 mt-1">
+              💡 自定義賽事：單場總提撥 {customConfig.totalDeduction}
             </p>
           )}
         </div>
