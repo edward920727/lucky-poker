@@ -7,7 +7,9 @@ import ExportButton from './ExportButton';
 import PlayerList from './PlayerList';
 import { logAction } from '../../utils/auditLog';
 import VirtualKeyboard from './VirtualKeyboard';
-import { calculatePrize, PrizeCalculationResult } from '../../utils/prizeCalculator';
+import { calculateICMPrize, PrizeCalculationResult } from '../../utils/prizeCalculator';
+import { getICMRewardStructure } from '../../constants/icmRewardConfig';
+import { getAdministrativeFee } from '../../utils/administrativeFeeConfig';
 import { formatTaiwanDate, formatTaiwanTime } from '../utils/dateUtils';
 
 const paymentMethodLabels: Record<PaymentMethod, string> = {
@@ -33,12 +35,21 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
   const [editedPlayers, setEditedPlayers] = useState<Player[]>([]);
   const [newMemberId, setNewMemberId] = useState('');
   const [showKeyboard, setShowKeyboard] = useState(false);
+  const [editedTotalDeduction, setEditedTotalDeduction] = useState<string>('');
 
   useEffect(() => {
     const record = getTournamentById(tournamentId);
     if (record) {
       setTournament(record);
       setEditedPlayers(JSON.parse(JSON.stringify(record.players))); // 深拷貝
+      // 初始化提撥金編輯值（整場固定一次）
+      if (record.customConfig?.totalDeduction !== undefined) {
+        setEditedTotalDeduction(record.customConfig.totalDeduction.toString());
+      } else if (record.totalDeduction !== undefined) {
+        setEditedTotalDeduction(record.totalDeduction.toString());
+      } else {
+        setEditedTotalDeduction('');
+      }
     }
   }, [tournamentId]);
 
@@ -63,30 +74,94 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
     
     if (!tournament || displayPlayers.length === 0) return null;
     
-    // 使用賽事記錄中的 totalBuyIn 作為總獎池
-    const totalPrizePool = tournament.totalBuyIn || 0;
+    // 所有賽事都使用新的ICM計算邏輯
+    const totalGroups = tournament.totalPlayers || displayPlayers.reduce((sum, p) => sum + p.buyInCount, 0);
     
-    // 如果沒有獎池，返回 null
-    if (totalPrizePool <= 0) return null;
-    
-    // 使用默認的前三名百分比 [15%, 10%, 5%]
-    const topThreePercentages: [number, number, number] = [15, 10, 5];
-    
-    try {
-      // 計算獎金分配
-      return calculatePrize(totalPrizePool, topThreePercentages, displayPlayers);
-    } catch (error) {
-      console.error('計算獎金時發生錯誤:', error);
-      return null;
+    if (tournament.tournamentType === 'custom' && tournament.customConfig) {
+      // 自定義賽事
+      const customConfig = tournament.customConfig;
+      if (customConfig.totalDeduction && customConfig.topThreeSplit) {
+        try {
+          return calculateICMPrize(
+            {
+              entryFee: customConfig.entryFee,
+              administrativeFee: customConfig.administrativeFee,
+              totalGroups,
+              totalDeduction: customConfig.totalDeduction,
+              topThreeSplit: customConfig.topThreeSplit,
+            },
+            displayPlayers
+          );
+        } catch (error) {
+          console.error('計算ICM獎金時發生錯誤:', error);
+          return null;
+        }
+      }
+    } else if (tournament.tournamentType) {
+      // 標準賽事，從ICM配置中獲取參數
+      const entryFee = parseInt(tournament.tournamentType);
+      const administrativeFee = tournament.administrativeFee || getAdministrativeFee(entryFee);
+      const icmStructure = getICMRewardStructure(entryFee);
+      
+      if (icmStructure) {
+        try {
+          return calculateICMPrize(
+            {
+              entryFee,
+              administrativeFee,
+              totalGroups,
+              totalDeduction: icmStructure.totalDeduction,
+              topThreeSplit: icmStructure.topThreeSplit,
+            },
+            displayPlayers
+          );
+        } catch (error) {
+          console.error('計算ICM獎金時發生錯誤:', error);
+          return null;
+        }
+      }
     }
+    
+    return null;
   }, [tournament, displayPlayers, isEditMode]);
 
   const handleSave = () => {
     if (!tournament) return;
 
+    // 計算新的提撥金和獎池
+    const totalDeductionNum = editedTotalDeduction ? parseInt(editedTotalDeduction) : 0;
+    const totalBuyInGroups = editedPlayers.reduce((sum, p) => sum + p.buyInCount, 0);
+    // 單次總提撥是整場固定一次，不是每組的
+    const totalDeduction = totalDeductionNum;
+    
+    // 重新計算總獎池
+    const entryFee = tournament.tournamentType === 'custom' && tournament.customConfig
+      ? tournament.customConfig.entryFee
+      : parseInt(tournament.tournamentType);
+    const totalBuyIn = editedPlayers.reduce((sum, p) => {
+      return sum + (p.buyInCount * entryFee);
+    }, 0);
+    
+    const administrativeFeePerPerson = tournament.administrativeFee || 0;
+    const totalAdministrativeFee = administrativeFeePerPerson * totalBuyInGroups;
+    
+    // 第一步：總獎金池 = (單組報名費 - 行政費) × 總組數
+    // 第二步：淨獎池 = 總獎金池 - 單場總提撥金
+    const totalPrizePool = (entryFee - administrativeFeePerPerson) * totalBuyInGroups - totalDeduction;
+
     const updatedTournament: TournamentRecord = {
       ...tournament,
       players: editedPlayers,
+      totalPlayers: totalBuyInGroups,
+      totalBuyIn,
+      totalAdministrativeFee,
+      totalDeduction: totalDeduction > 0 ? totalDeduction : undefined,
+      totalPrizePool,
+      // 如果是自定義賽事，更新 customConfig 中的提撥金
+      customConfig: tournament.customConfig ? {
+        ...tournament.customConfig,
+        totalDeduction: totalDeduction > 0 ? totalDeduction : undefined,
+      } : undefined,
     };
 
     updateTournament(updatedTournament);
@@ -98,6 +173,14 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
   const handleCancel = () => {
     if (tournament) {
       setEditedPlayers(JSON.parse(JSON.stringify(tournament.players))); // 深拷貝
+      // 重置提撥金編輯值
+      if (tournament.customConfig?.deductionPerGroup !== undefined) {
+        setEditedDeductionPerGroup(tournament.customConfig.deductionPerGroup.toString());
+      } else if (tournament.deductionPerGroup !== undefined) {
+        setEditedDeductionPerGroup(tournament.deductionPerGroup.toString());
+      } else {
+        setEditedDeductionPerGroup('');
+      }
     }
     setIsEditMode(false);
   };
@@ -165,7 +248,10 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
       return;
     }
 
-    const config = TOURNAMENT_TYPES[tournament.tournamentType];
+    const isCustom = tournament.tournamentType === 'custom' && tournament.customConfig;
+    const config = isCustom
+      ? { name: tournament.customConfig.name, startChip: tournament.customConfig.startChip }
+      : TOURNAMENT_TYPES[tournament.tournamentType as keyof typeof TOURNAMENT_TYPES];
     const history = PLAYER_HISTORY_DB[newMemberId.trim()] || [];
     const newPlayer: Player = {
       id: Date.now().toString(),
@@ -214,7 +300,13 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
     );
   }
 
-  const config = TOURNAMENT_TYPES[tournament.tournamentType];
+  const isCustom = tournament.tournamentType === 'custom' && tournament.customConfig;
+  const config = isCustom
+    ? { name: tournament.customConfig.name, startChip: tournament.customConfig.startChip }
+    : TOURNAMENT_TYPES[tournament.tournamentType as keyof typeof TOURNAMENT_TYPES];
+  const entryFee = isCustom && tournament.customConfig
+    ? tournament.customConfig.entryFee
+    : parseInt(tournament.tournamentType);
 
   const formatDate = (dateString: string) => {
     const dateStr = formatTaiwanDate(dateString, {
@@ -245,7 +337,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
               {tournament.tournamentName}
             </h1>
             <p className="text-gray-400 mt-1">
-              日期: {formatDate(tournament.date)} | 參賽費: NT$ {tournament.tournamentType}
+              日期: {formatDate(tournament.date)} | 參賽費: NT$ {entryFee.toLocaleString()}
             </p>
             <p className="text-gray-400 mt-1">
               起始碼量: {tournament.startChip.toLocaleString()}
@@ -290,6 +382,150 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
             )}
           </div>
         </div>
+
+        {/* 財務資訊 */}
+        {tournament.totalBuyIn && (
+          <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-2xl p-4 md:p-6 mb-6 border-2 border-poker-gold-600 border-opacity-40 shadow-xl relative z-10">
+            <h2 className="text-xl md:text-2xl font-display font-bold text-poker-gold-400 mb-4 flex items-center gap-3">
+              <span>💰</span>
+              <span>財務資訊</span>
+            </h2>
+            {isEditMode ? (
+              <div className="space-y-4">
+                <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                  <label className="block text-sm text-gray-400 mb-2">
+                    單場總提撥金 (NT$)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editedTotalDeduction}
+                    onChange={(e) => setEditedTotalDeduction(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-700 border-2 border-poker-gold-600 rounded-xl text-white text-lg focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
+                    placeholder="輸入單場總提撥金"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    <span className="text-orange-400 font-semibold">⚠️ 注意：這是整場比賽的提撥，不是每組的提撥</span>
+                    <br />
+                    當前組數：{editedPlayers.reduce((sum, p) => sum + p.buyInCount, 0)} 組
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                    <p className="text-sm text-gray-400 mb-2">總收入</p>
+                    <p className="text-2xl font-bold text-white">
+                      NT$ {editedPlayers.reduce((sum, p) => {
+                        const entryFee = tournament.tournamentType === 'custom' && tournament.customConfig
+                          ? tournament.customConfig.entryFee
+                          : parseInt(tournament.tournamentType);
+                        return sum + (p.buyInCount * entryFee);
+                      }, 0).toLocaleString()}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">報名費 × 買入組數</p>
+                  </div>
+                  {tournament.totalAdministrativeFee !== undefined && tournament.totalAdministrativeFee > 0 && (
+                    <div className="bg-red-900 bg-opacity-50 rounded-xl p-4 border border-red-700">
+                      <p className="text-sm text-gray-400 mb-2">總行政費</p>
+                      <p className="text-2xl font-bold text-red-300">
+                        NT$ {((tournament.administrativeFee || 0) * editedPlayers.reduce((sum, p) => sum + p.buyInCount, 0)).toLocaleString()}
+                      </p>
+                      {tournament.administrativeFee !== undefined && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          每人 {tournament.administrativeFee.toLocaleString()} × {editedPlayers.reduce((sum, p) => sum + p.buyInCount, 0)} 組
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {editedTotalDeduction && parseInt(editedTotalDeduction) > 0 && (
+                    <div className="bg-orange-900 bg-opacity-50 rounded-xl p-4 border border-orange-700">
+                      <p className="text-sm text-gray-400 mb-2">單場總提撥金</p>
+                      <p className="text-2xl font-bold text-orange-300">
+                        NT$ {parseInt(editedTotalDeduction).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        整場固定一次（不是每組）
+                      </p>
+                    </div>
+                  )}
+                  <div className="bg-poker-gold-900 bg-opacity-50 rounded-xl p-4 border border-poker-gold-700">
+                    <p className="text-sm text-gray-400 mb-2">總獎池（預覽）</p>
+                    <p className="text-2xl font-bold text-poker-gold-300">
+                      NT$ {(() => {
+                        const entryFee = tournament.tournamentType === 'custom' && tournament.customConfig
+                          ? tournament.customConfig.entryFee
+                          : parseInt(tournament.tournamentType);
+                        const administrativeFee = tournament.administrativeFee || 0;
+                        const totalGroups = editedPlayers.reduce((sum, p) => sum + p.buyInCount, 0);
+                        // 第一步：總獎金池 = (單組報名費 - 行政費) × 總組數
+                        const totalPrizePool = (entryFee - administrativeFee) * totalGroups;
+                        // 第二步：淨獎池 = 總獎金池 - 單場總提撥金
+                        const totalDeduction = parseInt(editedTotalDeduction) || 0;
+                        const netPool = totalPrizePool - totalDeduction;
+                        return netPool.toLocaleString();
+                      })()}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {tournament.customConfig?.prizePerGroup
+                        ? `單組獎金 × 組數`
+                        : `總收入 - 總行政費 - 總提撥金`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                  <p className="text-sm text-gray-400 mb-2">總收入</p>
+                  <p className="text-2xl font-bold text-white">
+                    NT$ {tournament.totalBuyIn.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">報名費 × 買入組數</p>
+                </div>
+                {tournament.totalAdministrativeFee !== undefined && tournament.totalAdministrativeFee > 0 && (
+                  <div className="bg-red-900 bg-opacity-50 rounded-xl p-4 border border-red-700">
+                    <p className="text-sm text-gray-400 mb-2">總行政費</p>
+                    <p className="text-2xl font-bold text-red-300">
+                      NT$ {tournament.totalAdministrativeFee.toLocaleString()}
+                    </p>
+                    {tournament.administrativeFee !== undefined && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        每人 {tournament.administrativeFee.toLocaleString()} × {tournament.totalPlayers} 組
+                      </p>
+                    )}
+                  </div>
+                )}
+                {tournament.totalDeduction !== undefined && tournament.totalDeduction > 0 && (
+                  <div className="bg-orange-900 bg-opacity-50 rounded-xl p-4 border border-orange-700">
+                    <p className="text-sm text-gray-400 mb-2">總提撥金</p>
+                    <p className="text-2xl font-bold text-orange-300">
+                      NT$ {tournament.totalDeduction.toLocaleString()}
+                    </p>
+                    {tournament.deductionPerGroup !== undefined && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        單組 {tournament.deductionPerGroup.toLocaleString()} × {tournament.totalPlayers} 組
+                      </p>
+                    )}
+                  </div>
+                )}
+                <div className="bg-poker-gold-900 bg-opacity-50 rounded-xl p-4 border border-poker-gold-700">
+                  <p className="text-sm text-gray-400 mb-2">總獎池</p>
+                  <p className="text-2xl font-bold text-poker-gold-300">
+                    NT$ {(tournament.totalPrizePool || tournament.totalBuyIn).toLocaleString()}
+                  </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {tournament.tournamentType === 'custom' && tournament.customConfig
+                        ? `(報名費 - 行政費) × 組數 - 單場總提撥`
+                        : tournament.totalAdministrativeFee !== undefined && tournament.totalAdministrativeFee > 0
+                        ? tournament.totalDeduction !== undefined && tournament.totalDeduction > 0
+                          ? `總收入 - 總行政費 - 單場總提撥`
+                          : `總收入 - 總行政費`
+                        : '總收入'}
+                    </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 統計面板 */}
         <div className="relative z-10">

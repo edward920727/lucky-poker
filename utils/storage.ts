@@ -112,7 +112,9 @@ export function updateTournament(tournament: TournamentRecord): void {
     const expectedTotalChips = totalBuyInGroups * tournament.startChip;
     const actualTotalChips = tournament.players.reduce((sum, p) => sum + p.currentChips, 0);
     const totalBuyIn = tournament.players.reduce((sum, p) => {
-      const entryFee = parseInt(tournament.tournamentType);
+      const entryFee = tournament.tournamentType === 'custom' && tournament.customConfig
+        ? tournament.customConfig.entryFee
+        : parseInt(tournament.tournamentType);
       return sum + (p.buyInCount * entryFee);
     }, 0);
     

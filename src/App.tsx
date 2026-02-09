@@ -3,20 +3,23 @@ import IndexPage from './components/IndexPage';
 import TournamentSelector from './components/TournamentSelector';
 import TournamentDashboard from './components/TournamentDashboard';
 import TournamentView from './components/TournamentView';
+import TournamentSettlement from './components/TournamentSettlement';
 import UserManagement from './components/UserManagement';
 import AllTournamentsView from './components/AllTournamentsView';
 import Login from './components/Login';
 import { TournamentType, Player } from '../constants/pokerConfig';
+import { CustomTournamentConfig } from '../types/tournament';
 import { isAuthenticated, logout, getCurrentUsername } from './utils/auth';
 import { isAdmin } from './utils/userManagement';
 
-type AppView = 'index' | 'selector' | 'dashboard' | 'view' | 'userManagement' | 'allTournaments';
+type AppView = 'index' | 'selector' | 'dashboard' | 'view' | 'userManagement' | 'allTournaments' | 'settlement';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [currentView, setCurrentView] = useState<AppView>('index');
   const [tournamentType, setTournamentType] = useState<TournamentType | null>(null);
+  const [customConfig, setCustomConfig] = useState<CustomTournamentConfig | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [viewingTournamentId, setViewingTournamentId] = useState<string | null>(null);
 
@@ -48,11 +51,20 @@ function App() {
   const handleCreateNew = () => {
     setCurrentView('selector');
     setTournamentType(null);
+    setCustomConfig(null);
     setPlayers([]);
   };
 
   const handleTournamentSelect = (type: TournamentType) => {
     setTournamentType(type);
+    setCustomConfig(null);
+    setPlayers([]);
+    setCurrentView('dashboard');
+  };
+
+  const handleCreateCustom = (config: CustomTournamentConfig) => {
+    setTournamentType('custom');
+    setCustomConfig(config);
     setPlayers([]);
     setCurrentView('dashboard');
   };
@@ -60,12 +72,14 @@ function App() {
   const handleBackToSelection = () => {
     setCurrentView('selector');
     setTournamentType(null);
+    setCustomConfig(null);
     setPlayers([]);
   };
 
   const handleBackToIndex = () => {
     setCurrentView('index');
     setTournamentType(null);
+    setCustomConfig(null);
     setPlayers([]);
     setViewingTournamentId(null);
   };
@@ -73,6 +87,7 @@ function App() {
   const handleSaveTournament = () => {
     setCurrentView('index');
     setTournamentType(null);
+    setCustomConfig(null);
     setPlayers([]);
   };
 
@@ -95,6 +110,21 @@ function App() {
 
   const handleBackFromAllTournaments = () => {
     setCurrentView('index');
+  };
+
+  const handleOpenSettlement = (tournamentId?: string) => {
+    setViewingTournamentId(tournamentId || null);
+    setCurrentView('settlement');
+  };
+
+  const handleBackFromSettlement = () => {
+    setCurrentView('index');
+    setViewingTournamentId(null);
+  };
+
+  const handleSaveSettlement = () => {
+    setCurrentView('index');
+    setViewingTournamentId(null);
   };
 
   // 如果正在檢查登入狀態，顯示載入畫面
@@ -153,7 +183,7 @@ function App() {
   }
 
   if (currentView === 'selector') {
-    return <TournamentSelector onSelect={handleTournamentSelect} onBack={handleBackToIndex} />;
+    return <TournamentSelector onSelect={handleTournamentSelect} onCreateCustom={handleCreateCustom} onOpenSettlement={() => handleOpenSettlement()} onBack={handleBackToIndex} />;
   }
 
   if (currentView === 'view' && viewingTournamentId) {
@@ -169,10 +199,21 @@ function App() {
     return (
       <TournamentDashboard
         tournamentType={tournamentType}
+        customConfig={customConfig}
         players={players}
         onPlayersChange={setPlayers}
         onBack={handleBackToSelection}
         onSave={handleSaveTournament}
+      />
+    );
+  }
+
+  if (currentView === 'settlement') {
+    return (
+      <TournamentSettlement
+        tournamentId={viewingTournamentId || undefined}
+        onBack={handleBackFromSettlement}
+        onSave={handleSaveSettlement}
       />
     );
   }

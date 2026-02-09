@@ -414,9 +414,9 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
                                     </p>
                                   </div>
                                   <div className="bg-green-600 bg-opacity-20 px-3 py-2 rounded-lg border border-green-500 border-opacity-30">
-                                    <p className="text-xs text-green-300 mb-1 font-medium">總碼量</p>
+                                    <p className="text-xs text-green-300 mb-1 font-medium">行政費用</p>
                                     <p className="text-base font-bold text-green-200">
-                                      {tournament.actualTotalChips.toLocaleString()}
+                                      {formatCurrency(tournament.totalAdministrativeFee || 0)}
                                     </p>
                                   </div>
                                 </div>

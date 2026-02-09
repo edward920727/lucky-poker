@@ -36,7 +36,9 @@ export default function MemberPaymentQuery({ onClose }: MemberPaymentQueryProps)
     allTournaments.forEach((tournament) => {
       const player = tournament.players.find(p => p.memberId === memberId.trim());
       if (player) {
-        const entryFee = parseInt(tournament.tournamentType);
+        const entryFee = tournament.tournamentType === 'custom' && tournament.customConfig
+          ? tournament.customConfig.entryFee
+          : parseInt(tournament.tournamentType);
         const totalAmount = player.buyInCount * entryFee;
         const paymentStatus = player.paymentMethod === 'unpaid' ? 'unpaid' : 'paid';
 

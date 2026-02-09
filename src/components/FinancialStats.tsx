@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { Player, PaymentMethod } from '../../constants/pokerConfig';
 import { TournamentType } from '../../constants/pokerConfig';
+import { CustomTournamentConfig } from '../../types/tournament';
 
 interface FinancialStatsProps {
   players: Player[];
   tournamentType: TournamentType;
+  customConfig?: CustomTournamentConfig | null;
 }
 
-export default function FinancialStats({ players, tournamentType }: FinancialStatsProps) {
+export default function FinancialStats({ players, tournamentType, customConfig }: FinancialStatsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const entryFee = parseInt(tournamentType);
+  const isCustom = tournamentType === 'custom' && customConfig;
+  const entryFee = isCustom ? customConfig.entryFee : parseInt(tournamentType);
   
   const calculateByPaymentMethod = (method: PaymentMethod) => {
     return players

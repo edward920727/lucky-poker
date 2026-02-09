@@ -1,12 +1,13 @@
 export const TOURNAMENT_TYPES = {
   '600': { name: '600限時錦標', startChip: 25000 },
-  '1200': { name: '1200限時錦標', startChip: 35000 },
+  '1200': { name: '1200限時錦標', startChip: 25000 },
+  '2300': { name: '2300限時錦標', startChip: 35000 },
   '3400': { name: '3400限時錦標', startChip: 50000 },
   '6600': { name: '6600限時錦標', startChip: 100000 },
   '11000': { name: '11000限時錦標', startChip: 150000 },
 } as const;
 
-export type TournamentType = keyof typeof TOURNAMENT_TYPES;
+export type TournamentType = keyof typeof TOURNAMENT_TYPES | 'custom';
 
 export type PaymentMethod = 'cash' | 'transfer' | 'unpaid';
 

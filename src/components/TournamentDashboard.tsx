@@ -7,13 +7,15 @@ import ExportButton from './ExportButton';
 import PrizePoolCalculator from './PrizePoolCalculator';
 import FinancialStats from './FinancialStats';
 import { saveTournament, getAllTournaments } from '../../utils/storage';
-import { TournamentRecord } from '../../types/tournament';
+import { TournamentRecord, CustomTournamentConfig } from '../../types/tournament';
 import { getTaiwanDateTime, getTaiwanTodayDateKey, getDateKey } from '../utils/dateUtils';
 import { logAction } from '../../utils/auditLog';
 import { PrizeCalculationResult } from '../../utils/prizeCalculator';
+import { getAdministrativeFee } from '../../utils/administrativeFeeConfig';
 
 interface TournamentDashboardProps {
   tournamentType: TournamentType;
+  customConfig?: CustomTournamentConfig | null;
   players: Player[];
   onPlayersChange: (players: Player[]) => void;
   onBack: () => void;
@@ -22,12 +24,19 @@ interface TournamentDashboardProps {
 
 export default function TournamentDashboard({
   tournamentType,
+  customConfig,
   players,
   onPlayersChange,
   onBack,
   onSave,
 }: TournamentDashboardProps) {
-  const config = TOURNAMENT_TYPES[tournamentType];
+  // 判斷是否為自定義賽事
+  const isCustom = tournamentType === 'custom' && customConfig;
+  const config = isCustom 
+    ? { name: customConfig.name, startChip: customConfig.startChip }
+    : TOURNAMENT_TYPES[tournamentType as keyof typeof TOURNAMENT_TYPES];
+  const entryFee = isCustom ? customConfig.entryFee : parseInt(tournamentType);
+  
   const totalBuyInGroups = players.reduce((sum, p) => sum + p.buyInCount, 0);
   const expectedTotalChips = totalBuyInGroups * config.startChip;
   const actualTotalChips = players.reduce((sum, p) => sum + p.currentChips, 0);
@@ -129,9 +138,21 @@ export default function TournamentDashboard({
     }
 
     const totalBuyIn = players.reduce((sum, p) => {
-      const entryFee = parseInt(tournamentType);
       return sum + (p.buyInCount * entryFee);
     }, 0);
+
+    // 計算行政費和獎池
+    const administrativeFeePerPerson = isCustom && customConfig
+      ? customConfig.administrativeFee
+      : getAdministrativeFee(entryFee);
+    const totalAdministrativeFee = administrativeFeePerPerson * totalBuyInGroups;
+    
+    // 第一步：總獎金池 = (單組報名費 - 行政費) × 總組數
+    // 第二步：淨獎池 = 總獎金池 - 單場總提撥金（整場固定一次）
+    const totalDeduction = isCustom && customConfig && customConfig.totalDeduction
+      ? customConfig.totalDeduction
+      : 0;
+    const totalPrizePool = (entryFee - administrativeFeePerPerson) * totalBuyInGroups - totalDeduction;
 
     // 構建賽事名稱，如果設置了場次號碼，添加到名稱後面
     let tournamentName: string = config.name;
@@ -145,14 +166,19 @@ export default function TournamentDashboard({
     const tournamentRecord: TournamentRecord = {
       id: Date.now().toString(),
       date: taiwanDateTime,
-      tournamentType,
+      tournamentType: isCustom ? 'custom' : tournamentType,
       tournamentName: tournamentName as string,
       totalPlayers: totalBuyInGroups, // 改為買入組數
-      totalBuyIn,
+      totalBuyIn, // 總收入
+      administrativeFee: administrativeFeePerPerson, // 每人行政費
+      totalAdministrativeFee, // 總行政費
+      totalDeduction: totalDeduction > 0 ? totalDeduction : undefined, // 單場總提撥金
+      totalPrizePool, // 總獎池（淨獎池）
       players: [...players], // 深拷贝玩家数据
       expectedTotalChips,
       actualTotalChips,
       startChip: config.startChip,
+      ...(isCustom && customConfig ? { customConfig } : {}),
     };
 
     saveTournament(tournamentRecord);
@@ -203,8 +229,24 @@ export default function TournamentDashboard({
                 </div>
                 <div className="flex items-center gap-2 bg-poker-gold-900 bg-opacity-50 px-3 md:px-4 py-2 rounded-lg border border-poker-gold-600">
                   <span className="text-base md:text-lg">💰</span>
-                  <span className="text-poker-gold-300 font-semibold text-sm md:text-base">參賽費: NT$ {tournamentType}</span>
+                  <span className="text-poker-gold-300 font-semibold text-sm md:text-base">參賽費: NT$ {entryFee.toLocaleString()}</span>
                 </div>
+                {isCustom && customConfig && (
+                  <>
+                    {customConfig.administrativeFee > 0 && (
+                      <div className="flex items-center gap-2 bg-poker-gold-900 bg-opacity-50 px-3 md:px-4 py-2 rounded-lg border border-poker-gold-600">
+                        <span className="text-base md:text-lg">📋</span>
+                        <span className="text-poker-gold-300 font-semibold text-sm md:text-base">行政費: NT$ {customConfig.administrativeFee.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {customConfig.totalDeduction && customConfig.totalDeduction > 0 && (
+                      <div className="flex items-center gap-2 bg-orange-900 bg-opacity-50 px-3 md:px-4 py-2 rounded-lg border border-orange-600">
+                        <span className="text-base md:text-lg">💸</span>
+                        <span className="text-orange-300 font-semibold text-sm md:text-base">單場總提撥: NT$ {customConfig.totalDeduction.toLocaleString()}</span>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -284,12 +326,13 @@ export default function TournamentDashboard({
         />
 
         {/* 財務統計 */}
-        <FinancialStats players={players} tournamentType={tournamentType} />
+        <FinancialStats players={players} tournamentType={tournamentType} customConfig={customConfig} />
 
         {/* 獎金分配計算器 */}
         <PrizePoolCalculator 
           players={players} 
           tournamentType={tournamentType}
+          customConfig={customConfig}
           onCalculationChange={setPrizeCalculation} 
         />
 
