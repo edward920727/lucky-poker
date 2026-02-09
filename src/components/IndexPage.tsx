@@ -29,7 +29,6 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
   const [showMemberQuery, setShowMemberQuery] = useState(false);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
   const [quickEditTournament, setQuickEditTournament] = useState<TournamentRecord | null>(null);
-  const [editingChips, setEditingChips] = useState<Record<string, number>>({});
   const [chipInputValues, setChipInputValues] = useState<Record<string, string>>({});
 
   const loadTournaments = () => {
@@ -241,14 +240,11 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
       if (fullTournament) {
         setQuickEditTournament(fullTournament);
         // 初始化编辑筹码值
-        const chips: Record<string, number> = {};
         const inputValues: Record<string, string> = {};
         fullTournament.players.forEach(p => {
           const chipValue = p.currentChips || 0;
-          chips[p.id] = chipValue;
           inputValues[p.id] = chipValue.toString();
         });
-        setEditingChips(chips);
         setChipInputValues(inputValues);
       }
     }
@@ -272,11 +268,6 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
     setChipInputValues(prev => ({
       ...prev,
       [playerId]: newChips.toString(),
-    }));
-    
-    setEditingChips(prev => ({
-      ...prev,
-      [playerId]: newChips,
     }));
 
     // 更新比赛数据
@@ -639,7 +630,6 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
               <button
                 onClick={() => {
                   setQuickEditTournament(null);
-                  setEditingChips({});
                   setChipInputValues({});
                 }}
                 className="text-gray-400 hover:text-white text-2xl"
@@ -713,7 +703,6 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
                     handleChipBlur(player.id);
                   });
                   setQuickEditTournament(null);
-                  setEditingChips({});
                   setChipInputValues({});
                 }}
                 className="flex-1 bg-poker-gold-600 hover:bg-poker-gold-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200"

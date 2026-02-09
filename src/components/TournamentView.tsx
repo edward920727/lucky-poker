@@ -339,8 +339,9 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
     }
 
     const isCustom = tournament.tournamentType === 'custom' && tournament.customConfig;
-    const config = isCustom && tournament.customConfig
-      ? { name: tournament.customConfig?.name || '', startChip: tournament.customConfig?.startChip || 0 }
+    const customConfig = tournament.customConfig;
+    const config = isCustom && customConfig
+      ? { name: customConfig.name || '', startChip: customConfig.startChip || 0 }
       : TOURNAMENT_TYPES[tournament.tournamentType as keyof typeof TOURNAMENT_TYPES];
     if (!config) {
       alert('無法獲取賽事配置');
