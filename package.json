@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "德州扑克协会专用赛事管理系统",
   "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
