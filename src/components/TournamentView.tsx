@@ -29,6 +29,74 @@ interface TournamentViewProps {
   onBack: () => void;
 }
 
+// 支付方式統計組件
+function PaymentMethodStats({ players, entryFee }: { players: Player[]; entryFee: number }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  const calculateByPaymentMethod = (method: PaymentMethod) => {
+    return players
+      .filter(p => p.paymentMethod === method)
+      .reduce((sum, p) => sum + (p.buyInCount * entryFee), 0);
+  };
+
+  const cashTotal = calculateByPaymentMethod('cash');
+  const transferTotal = calculateByPaymentMethod('transfer');
+  const unpaidTotal = calculateByPaymentMethod('unpaid');
+  const totalExpected = players.reduce((sum, p) => sum + (p.buyInCount * entryFee), 0);
+  const totalReceived = cashTotal + transferTotal;
+
+  return (
+    <div className="mb-4">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between gap-3 mb-2 hover:opacity-80 transition-opacity"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-lg">💳</span>
+          <span className="text-base font-semibold text-poker-gold-300">支付方式統計</span>
+        </div>
+        <svg
+          className={`w-5 h-5 text-poker-gold-400 transition-transform duration-300 ${isExpanded ? 'transform rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      
+      {isExpanded && (
+        <div className="animate-fadeIn space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="bg-gradient-to-br from-green-600 to-green-800 p-3 rounded-xl border-2 border-green-500 border-opacity-50">
+              <p className="text-sm font-semibold text-green-200 mb-1">💵 現金</p>
+              <p className="text-xl font-black text-white">NT$ {cashTotal.toLocaleString()}</p>
+            </div>
+            <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-3 rounded-xl border-2 border-blue-500 border-opacity-50">
+              <p className="text-sm font-semibold text-blue-200 mb-1">🏦 轉帳</p>
+              <p className="text-xl font-black text-white">NT$ {transferTotal.toLocaleString()}</p>
+            </div>
+            <div className={`p-3 rounded-xl border-2 border-opacity-50 ${unpaidTotal > 0 ? 'bg-gradient-to-br from-red-600 to-red-800 border-red-500 animate-pulse' : 'bg-gradient-to-br from-gray-600 to-gray-800 border-gray-500'}`}>
+              <p className="text-sm font-semibold text-white opacity-90 mb-1">⚠️ 未付</p>
+              <p className="text-xl font-black text-white">NT$ {unpaidTotal.toLocaleString()}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="bg-gray-700 p-3 rounded-xl border border-gray-600">
+              <p className="text-sm text-gray-300 mb-1 font-semibold">應收總額</p>
+              <p className="text-xl font-black text-white">NT$ {totalExpected.toLocaleString()}</p>
+            </div>
+            <div className={`p-3 rounded-xl border-2 border-opacity-50 ${totalReceived === totalExpected ? 'bg-gradient-to-br from-green-600 to-green-800 border-green-500' : 'bg-gradient-to-br from-yellow-600 to-yellow-800 border-yellow-500'}`}>
+              <p className="text-sm text-white opacity-90 mb-1 font-semibold">實收總額</p>
+              <p className="text-xl font-black text-white">NT$ {totalReceived.toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function TournamentView({ tournamentId, onBack }: TournamentViewProps) {
   const [tournament, setTournament] = useState<TournamentRecord | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -64,6 +132,15 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
   const displayPlayers = tournament 
     ? (isEditMode ? editedPlayers : tournament.players)
     : [];
+
+  // 計算 entryFee（用於支付方式統計）
+  const entryFee = useMemo(() => {
+    if (!tournament) return 0;
+    if (tournament.tournamentType === 'custom' && tournament.customConfig) {
+      return tournament.customConfig.entryFee;
+    }
+    return parseInt(tournament.tournamentType);
+  }, [tournament]);
 
   // 計算獎金分配（使用賽事記錄中的總買入金額作為獎池）
   // 注意：只在非編輯模式下計算，編輯模式下不計算獎金
@@ -304,9 +381,6 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
   const config = isCustom
     ? { name: tournament.customConfig.name, startChip: tournament.customConfig.startChip }
     : TOURNAMENT_TYPES[tournament.tournamentType as keyof typeof TOURNAMENT_TYPES];
-  const entryFee = isCustom && tournament.customConfig
-    ? tournament.customConfig.entryFee
-    : parseInt(tournament.tournamentType);
 
   const formatDate = (dateString: string) => {
     const dateStr = formatTaiwanDate(dateString, {
@@ -359,6 +433,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                     config={config}
                     prizeCalculation={prizeCalculation}
                     tournamentName={tournament.tournamentName}
+                    entryFee={entryFee}
                   />
                 </div>
               </>
@@ -390,6 +465,9 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
               <span>💰</span>
               <span>財務資訊</span>
             </h2>
+            
+            {/* 支付方式統計 - 可展開 */}
+            <PaymentMethodStats players={displayPlayers} entryFee={entryFee} />
             {isEditMode ? (
               <div className="space-y-4">
                 <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">

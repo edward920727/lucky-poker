@@ -31,9 +31,8 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
   const loadTournaments = () => {
     const records = getAllTournaments();
     setTournaments(records);
-    // 默认展开所有日期
-    const dates = new Set(records.map(t => getDateKey(t.date)));
-    setExpandedDates(dates);
+    // 預設不展開任何日期
+    setExpandedDates(new Set());
   };
 
   useEffect(() => {
@@ -45,9 +44,7 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
       unsubscribe = setupRealtimeSyncForTournaments((tournaments) => {
         console.log('[實時同步] 收到更新，賽事數量:', tournaments.length);
         setTournaments(tournaments);
-        // 更新展開的日期
-        const dates = new Set(tournaments.map(t => getDateKey(t.date)));
-        setExpandedDates(dates);
+        // 保持當前展開狀態，不自動展開新日期
       });
     } catch (error) {
       console.warn('實時同步設置失敗（將使用本地存儲）:', error);

@@ -31,9 +31,7 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
     try {
       const unsubscribe = setupRealtimeSyncForTournaments((tournaments) => {
         setTournaments(tournaments);
-        // 更新展開的日期
-        const dates = new Set(tournaments.map(t => getDateKey(t.date)));
-        setExpandedDates(dates);
+        // 保持當前展開狀態，不自動展開新日期
       });
       
       return () => {
@@ -44,12 +42,11 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
     }
   }, []);
 
-  const loadTournaments = () => {
+    const loadTournaments = () => {
     const records = getAllTournaments();
     setTournaments(records);
-    // 默认展开所有日期
-    const dates = new Set(records.map(t => getDateKey(t.date)));
-    setExpandedDates(dates);
+    // 預設不展開任何日期
+    setExpandedDates(new Set());
   };
 
   const formatDateFull = (dateString: string) => {
@@ -174,7 +171,8 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
       case 'today':
         setStartDate(todayStr);
         setEndDate(todayStr);
-        setExpandedDates(new Set([todayStr]));
+        // 預設不展開，用戶可手動展開
+        setExpandedDates(new Set());
         break;
       case 'week':
         // 計算本週第一天（週日）
@@ -184,15 +182,8 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
         const weekStartStr = `${weekStartDate.getFullYear()}-${String(weekStartDate.getMonth() + 1).padStart(2, '0')}-${String(weekStartDate.getDate()).padStart(2, '0')}`;
         setStartDate(weekStartStr);
         setEndDate(todayStr);
-        // 展開本週的所有日期
-        const weekDates = new Set<string>();
-        for (let i = 0; i <= dayOfWeek; i++) {
-          const date = new Date(weekStartDate);
-          date.setDate(weekStartDate.getDate() + i);
-          const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-          weekDates.add(dateStr);
-        }
-        setExpandedDates(weekDates);
+        // 預設不展開，用戶可手動展開
+        setExpandedDates(new Set());
         break;
       case 'month':
         // 本月第一天
@@ -209,8 +200,8 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
       case 'all':
         setStartDate('');
         setEndDate('');
-        const dates = new Set(tournaments.map(t => getDateKey(t.date)));
-        setExpandedDates(dates);
+        // 預設不展開任何日期
+        setExpandedDates(new Set());
         break;
     }
   };
@@ -218,9 +209,8 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
   const clearDateFilter = () => {
     setStartDate('');
     setEndDate('');
-    // 恢复展开所有日期
-    const dates = new Set(tournaments.map(t => getDateKey(t.date)));
-    setExpandedDates(dates);
+    // 預設不展開任何日期
+    setExpandedDates(new Set());
   };
 
   const clearSearch = () => {

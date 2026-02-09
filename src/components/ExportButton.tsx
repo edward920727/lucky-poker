@@ -1,17 +1,24 @@
 import { useRef } from 'react';
 import html2canvas from 'html2canvas';
-import { Player } from '../../constants/pokerConfig';
+import { Player, PaymentMethod } from '../../constants/pokerConfig';
 import { PrizeCalculationResult } from '../../utils/prizeCalculator';
 import { getTaiwanTodayDateKey, formatTaiwanDate, getTaiwanDateTime } from '../utils/dateUtils';
+
+const paymentMethodLabels: Record<PaymentMethod, string> = {
+  cash: '現金',
+  transfer: '轉帳',
+  unpaid: '未付',
+};
 
 interface ExportButtonProps {
   players: Player[];
   config: { name: string; startChip: number };
   prizeCalculation?: PrizeCalculationResult | null;
   tournamentName?: string; // 完整的賽事名稱（包含場次號碼，如 "600#1"）
+  entryFee?: number; // 報名費（用於計算支付方式統計）
 }
 
-export default function ExportButton({ players, config, prizeCalculation, tournamentName }: ExportButtonProps) {
+export default function ExportButton({ players, config, prizeCalculation, tournamentName, entryFee }: ExportButtonProps) {
   const exportRef = useRef<HTMLDivElement>(null);
 
   const handleExport = async () => {
@@ -82,6 +89,7 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
               <th className="border border-gray-700 py-3 px-4 text-left">名次</th>
               <th className="border border-gray-700 py-3 px-4 text-left">會編</th>
               <th className="border border-gray-700 py-3 px-4 text-left">買入次數</th>
+              <th className="border border-gray-700 py-3 px-4 text-left">支付方式</th>
               <th className="border border-gray-700 py-3 px-4 text-left">當前碼量</th>
               <th className="border border-gray-700 py-3 px-4 text-right">獎金金額</th>
             </tr>
@@ -115,6 +123,15 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
                   </td>
                   <td className="border border-gray-700 py-3 px-4 font-mono text-xl">{player.memberId}</td>
                   <td className="border border-gray-700 py-3 px-4">{player.buyInCount}</td>
+                  <td className="border border-gray-700 py-3 px-4">
+                    <span className={`px-2 py-1 rounded text-sm font-semibold ${
+                      player.paymentMethod === 'cash' ? 'bg-green-600 text-white' :
+                      player.paymentMethod === 'transfer' ? 'bg-blue-600 text-white' :
+                      'bg-red-600 text-white'
+                    }`}>
+                      {paymentMethodLabels[player.paymentMethod]}
+                    </span>
+                  </td>
                   <td className="border border-gray-700 py-3 px-4">{player.currentChips.toLocaleString()}</td>
                   <td className="border border-gray-700 py-3 px-4 text-right font-semibold text-green-400">
                     {displayPrize !== null ? `NT$ ${displayPrize.toLocaleString()}` : '-'}
