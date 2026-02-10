@@ -35,7 +35,12 @@
 
 ### 4. 配置環境變量
 
+**重要安全提示：** 為了保護您的 Firebase API Key，請使用環境變量而不是硬編碼在代碼中。
+
 1. 在項目根目錄創建 `.env` 文件（如果不存在）
+   - 可以複製 `.env.example` 文件作為模板：`cp .env.example .env`
+   - 或手動創建 `.env` 文件
+
 2. 將以下內容填入，替換為您的 Firebase 配置：
 
 ```env
@@ -45,7 +50,10 @@ VITE_FIREBASE_PROJECT_ID=your-project-id
 VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
 VITE_FIREBASE_APP_ID=your-app-id
+VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
 ```
+
+3. **重要：** 確保 `.env` 文件已在 `.gitignore` 中（已預設），不要將此文件提交到版本控制系統
 
 ### 5. 設置 Firestore 安全規則（重要！）
 

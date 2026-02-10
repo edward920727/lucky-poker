@@ -16,16 +16,30 @@ import {
 } from 'firebase/firestore';
 import { firebaseConfig, isFirebaseConfigured } from '../../utils/firebaseConfig';
 import { getCurrentUsername } from './auth';
+import { hashPassword, verifyPassword, isLegacyUserFormat } from './passwordHash';
 
 const STORAGE_KEY = 'lucky_poker_users';
 const DEFAULT_ADMIN_USERNAME = 'gi';
 const DEFAULT_ADMIN_PASSWORD = 'poker888';
 const PROTECTED_USERNAMES = ['gi', 'edward']; // 受保護的帳號（不可刪除）
 
+/**
+ * 用戶接口（新格式：使用密碼哈希）
+ */
 export interface User {
   username: string;
-  password: string;
+  passwordHash: string; // 密碼哈希值
+  passwordSalt: string; // 鹽值
   isAdmin?: boolean; // 是否為管理員（只有管理員可以進入管理頁面）
+}
+
+/**
+ * 舊格式用戶接口（用於向後兼容和遷移）
+ */
+interface LegacyUser {
+  username: string;
+  password: string; // 明文密碼（舊格式）
+  isAdmin?: boolean;
 }
 
 let app: FirebaseApp | null = null;
@@ -81,6 +95,37 @@ function isIgnorableNetworkError(error: any): boolean {
 
 const USERS_COLLECTION = 'users';
 
+/**
+ * 將舊格式用戶遷移到新格式（明文密碼 -> 哈希密碼）
+ */
+async function migrateLegacyUser(legacyUser: LegacyUser): Promise<User> {
+  const { hash, salt } = await hashPassword(legacyUser.password);
+  return {
+    username: legacyUser.username,
+    passwordHash: hash,
+    passwordSalt: salt,
+    isAdmin: legacyUser.isAdmin || false,
+  };
+}
+
+/**
+ * 檢查並遷移用戶數據（如果為舊格式）
+ */
+async function migrateUserIfNeeded(user: any): Promise<User> {
+  if (isLegacyUserFormat(user)) {
+    console.log(`遷移用戶 ${user.username} 的密碼格式...`);
+    return await migrateLegacyUser(user as LegacyUser);
+  }
+  // 如果已經是 new format，直接返回
+  if ('passwordHash' in user && 'passwordSalt' in user) {
+    return user as User;
+  }
+  // 如果格式不正確，嘗試遷移（假設有 password 字段）
+  if ('password' in user) {
+    return await migrateLegacyUser(user as LegacyUser);
+  }
+  throw new Error(`無法識別的用戶格式: ${JSON.stringify(user)}`);
+}
 
 /**
  * 獲取所有用戶（異步，支援雲端同步）
@@ -93,21 +138,31 @@ export async function getAllUsersAsync(): Promise<User[]> {
       const querySnapshot = await getDocs(usersRef);
       
       const users: User[] = [];
+      const migrationPromises: Promise<void>[] = [];
+      
       querySnapshot.forEach((doc) => {
         const userData = doc.data();
-        users.push({
-          username: userData.username,
-          password: userData.password,
-          isAdmin: userData.isAdmin || false,
+        // 檢查並遷移舊格式
+        const migrationPromise = migrateUserIfNeeded(userData).then(migratedUser => {
+          users.push(migratedUser);
+          // 如果進行了遷移，保存新格式
+          if (isLegacyUserFormat(userData)) {
+            saveUsers([migratedUser]).catch(err => console.error('遷移後保存失敗:', err));
+          }
         });
+        migrationPromises.push(migrationPromise);
       });
+      
+      await Promise.all(migrationPromises);
 
       // 確保默認管理員存在
       const adminExists = users.some(u => u.username === DEFAULT_ADMIN_USERNAME);
       if (!adminExists) {
+        const { hash, salt } = await hashPassword(DEFAULT_ADMIN_PASSWORD);
         const defaultAdmin: User = {
           username: DEFAULT_ADMIN_USERNAME,
-          password: DEFAULT_ADMIN_PASSWORD,
+          passwordHash: hash,
+          passwordSalt: salt,
           isAdmin: true,
         };
         users.push(defaultAdmin);
@@ -129,68 +184,97 @@ export async function getAllUsersAsync(): Promise<User[]> {
       return users;
     } catch (error) {
       console.error('從雲端獲取用戶失敗，使用本地存儲:', error);
-      return getAllUsersLocal();
+      // 異步獲取本地用戶並遷移
+      return await getAllUsersAsyncFromLocal();
     }
   }
 
-  // 如果 Firebase 未配置，使用本地存儲
-  return getAllUsersLocal();
+  // 如果 Firebase 未配置，使用本地存儲並遷移
+  return await getAllUsersAsyncFromLocal();
+}
+
+/**
+ * 從本地存儲獲取所有用戶並遷移（異步版本）
+ */
+async function getAllUsersAsyncFromLocal(): Promise<User[]> {
+  const localUsers = getAllUsersLocal();
+  if (localUsers.length === 0) {
+    // 如果沒有用戶，創建默認管理員
+    const { hash, salt } = await hashPassword(DEFAULT_ADMIN_PASSWORD);
+    const defaultAdmin: User = {
+      username: DEFAULT_ADMIN_USERNAME,
+      passwordHash: hash,
+      passwordSalt: salt,
+      isAdmin: true,
+    };
+    saveUsersLocal([defaultAdmin]);
+    return [defaultAdmin];
+  }
+  
+  // 遷移所有舊格式用戶
+  const migratedUsers: User[] = [];
+  for (const user of localUsers) {
+    if (isLegacyUserFormat(user)) {
+      const migrated = await migrateLegacyUser(user as LegacyUser);
+      migratedUsers.push(migrated);
+    } else if ('passwordHash' in user && 'passwordSalt' in user) {
+      migratedUsers.push(user as User);
+    }
+  }
+  
+  // 確保默認管理員存在
+  const adminExists = migratedUsers.some(u => u.username === DEFAULT_ADMIN_USERNAME);
+  if (!adminExists) {
+    const { hash, salt } = await hashPassword(DEFAULT_ADMIN_PASSWORD);
+    migratedUsers.push({
+      username: DEFAULT_ADMIN_USERNAME,
+      passwordHash: hash,
+      passwordSalt: salt,
+      isAdmin: true,
+    });
+  }
+  
+  // 保存遷移後的用戶
+  if (migratedUsers.length > 0) {
+    saveUsersLocal(migratedUsers);
+  }
+  
+  return migratedUsers;
 }
 
 /**
  * 獲取所有用戶（同步版本，用於向後兼容）
+ * 注意：此函數返回的可能是舊格式，建議使用異步版本
  */
-export function getAllUsers(): User[] {
+export function getAllUsers(): (User | LegacyUser)[] {
   return getAllUsersLocal();
 }
 
 /**
- * 從本地存儲獲取所有用戶
+ * 從本地存儲獲取所有用戶（同步版本，用於向後兼容）
+ * 注意：此函數會自動遷移舊格式，但由於是同步函數，無法進行異步哈希
+ * 因此會返回需要遷移的標記，實際遷移在異步函數中進行
  */
-function getAllUsersLocal(): User[] {
+function getAllUsersLocal(): (User | LegacyUser)[] {
   const stored = localStorage.getItem(STORAGE_KEY);
   
   if (!stored) {
-    // 如果沒有存儲，初始化默認管理員
-    const defaultAdmin: User = {
-      username: DEFAULT_ADMIN_USERNAME,
-      password: DEFAULT_ADMIN_PASSWORD,
-      isAdmin: true,
-    };
-    saveUsersLocal([defaultAdmin]);
-    return [defaultAdmin];
+    // 如果沒有存儲，返回空數組（讓異步函數處理默認管理員的創建）
+    return [];
   }
 
   try {
-    const users: User[] = JSON.parse(stored);
-    // 確保默認管理員存在且是管理員
+    const users: (User | LegacyUser)[] = JSON.parse(stored);
+    // 確保默認管理員存在（如果是舊格式，會在異步函數中遷移）
     const adminExists = users.some(u => u.username === DEFAULT_ADMIN_USERNAME);
     if (!adminExists) {
-      users.push({
-        username: DEFAULT_ADMIN_USERNAME,
-        password: DEFAULT_ADMIN_PASSWORD,
-        isAdmin: true,
-      });
-      saveUsersLocal(users);
-    } else {
-      // 確保默認管理員的 isAdmin 為 true
-      const adminIndex = users.findIndex(u => u.username === DEFAULT_ADMIN_USERNAME);
-      if (adminIndex !== -1 && !users[adminIndex].isAdmin) {
-        users[adminIndex].isAdmin = true;
-        saveUsersLocal(users);
-      }
+      // 添加一個標記，表示需要創建默認管理員（異步函數會處理）
+      // 這裡不添加，讓異步函數處理
     }
     return users;
   } catch (error) {
     console.error('Error parsing users:', error);
-    // 如果解析失敗，重新初始化
-    const defaultAdmin: User = {
-      username: DEFAULT_ADMIN_USERNAME,
-      password: DEFAULT_ADMIN_PASSWORD,
-      isAdmin: true,
-    };
-    saveUsersLocal([defaultAdmin]);
-    return [defaultAdmin];
+    return [];
   }
 }
 
@@ -209,7 +293,8 @@ async function saveUsers(users: User[]): Promise<void> {
         const userDocRef = doc(db!, USERS_COLLECTION, user.username);
         await setDoc(userDocRef, {
           username: user.username,
-          password: user.password,
+          passwordHash: user.passwordHash,
+          passwordSalt: user.passwordSalt,
           isAdmin: user.isAdmin || false,
           updatedAt: Timestamp.now(),
         }, { merge: true });
@@ -264,9 +349,12 @@ export async function addUserAsync(username: string, password: string, isAdmin: 
     return { success: false, message: '密碼不能為空' };
   }
 
+  // 哈希密碼
+  const { hash, salt } = await hashPassword(password.trim());
   const newUser: User = {
     username: username.trim(),
-    password: password.trim(),
+    passwordHash: hash,
+    passwordSalt: salt,
     isAdmin,
   };
 
@@ -277,6 +365,7 @@ export async function addUserAsync(username: string, password: string, isAdmin: 
 
 /**
  * 添加新用戶（同步版本，用於向後兼容）
+ * 注意：此函數會異步處理密碼哈希，實際保存是異步的
  * 只有管理員可以新增用戶
  */
 export function addUser(username: string, password: string, isAdminUser: boolean = false): { success: boolean; message: string } {
@@ -291,36 +380,27 @@ export function addUser(username: string, password: string, isAdminUser: boolean
     return { success: false, message: '只有管理員可以新增用戶' };
   }
 
-  const users = getAllUsersLocal();
+  // 異步處理（哈希密碼並保存）
+  hashPassword(password.trim()).then(({ hash, salt }) => {
+    getAllUsersAsync().then(users => {
+      // 檢查用戶名是否已存在
+      if (users.some(u => u.username === username)) {
+        return;
+      }
+
+      const newUser: User = {
+        username: username.trim(),
+        passwordHash: hash,
+        passwordSalt: salt,
+        isAdmin: isAdminUser,
+      };
+
+      users.push(newUser);
+      saveUsers(users).catch(err => console.error('保存失敗:', err));
+    });
+  }).catch(err => console.error('哈希密碼失敗:', err));
   
-  // 檢查用戶名是否已存在
-  if (users.some(u => u.username === username)) {
-    return { success: false, message: '該帳號已存在' };
-  }
-
-  // 檢查用戶名是否為空
-  if (!username.trim()) {
-    return { success: false, message: '帳號不能為空' };
-  }
-
-  // 檢查密碼是否為空
-  if (!password.trim()) {
-    return { success: false, message: '密碼不能為空' };
-  }
-
-  const newUser: User = {
-    username: username.trim(),
-    password: password.trim(),
-    isAdmin: isAdminUser,
-  };
-
-  users.push(newUser);
-  saveUsersLocal(users);
-  
-  // 異步同步到雲端（不等待結果）
-  saveUsers(users).catch(err => console.error('雲端同步失敗:', err));
-  
-  return { success: true, message: '用戶添加成功' };
+  return { success: true, message: '用戶添加成功（處理中）' };
 }
 
 /**
@@ -358,6 +438,7 @@ export async function deleteUserAsync(username: string): Promise<{ success: bool
 
 /**
  * 刪除用戶（同步版本，用於向後兼容）
+ * 注意：此函數會異步處理，實際刪除是異步的
  */
 export function deleteUser(username: string): { success: boolean; message: string } {
   // 不允許刪除受保護的帳號
@@ -365,19 +446,10 @@ export function deleteUser(username: string): { success: boolean; message: strin
     return { success: false, message: '不能刪除此帳號（受保護帳號）' };
   }
 
-  const users = getAllUsersLocal();
-  const filteredUsers = users.filter(u => u.username !== username);
+  // 異步處理刪除
+  deleteUserAsync(username).catch(err => console.error('刪除失敗:', err));
   
-  if (filteredUsers.length === users.length) {
-    return { success: false, message: '用戶不存在' };
-  }
-
-  saveUsersLocal(filteredUsers);
-  
-  // 異步同步到雲端（不等待結果）
-  deleteUserAsync(username).catch(err => console.error('雲端同步失敗:', err));
-  
-  return { success: true, message: '用戶刪除成功' };
+  return { success: true, message: '用戶刪除成功（處理中）' };
 }
 
 /**
@@ -402,33 +474,38 @@ export async function updateUserPasswordAsync(username: string, newPassword: str
     return { success: false, message: '用戶不存在' };
   }
 
-  users[userIndex].password = newPassword.trim();
+  // 哈希新密碼
+  const { hash, salt } = await hashPassword(newPassword.trim());
+  users[userIndex].passwordHash = hash;
+  users[userIndex].passwordSalt = salt;
   await saveUsers(users);
   return { success: true, message: '密碼更新成功' };
 }
 
 /**
  * 更新用戶密碼（同步版本，用於向後兼容）
+ * 注意：此函數會異步處理密碼哈希
  */
 export function updateUserPassword(username: string, newPassword: string): { success: boolean; message: string } {
   if (!newPassword.trim()) {
     return { success: false, message: '密碼不能為空' };
   }
 
-  const users = getAllUsersLocal();
-  const userIndex = users.findIndex(u => u.username === username);
-  
-  if (userIndex === -1) {
-    return { success: false, message: '用戶不存在' };
-  }
+  // 異步處理（哈希密碼並更新）
+  hashPassword(newPassword.trim()).then(({ hash, salt }) => {
+    getAllUsersAsync().then(users => {
+      const userIndex = users.findIndex(u => u.username === username);
+      if (userIndex === -1) {
+        return;
+      }
 
-  users[userIndex].password = newPassword.trim();
-  saveUsersLocal(users);
+      users[userIndex].passwordHash = hash;
+      users[userIndex].passwordSalt = salt;
+      saveUsers(users).catch(err => console.error('保存失敗:', err));
+    });
+  }).catch(err => console.error('哈希密碼失敗:', err));
   
-  // 異步同步到雲端（不等待結果）
-  saveUsers(users).catch(err => console.error('雲端同步失敗:', err));
-  
-  return { success: true, message: '密碼更新成功' };
+  return { success: true, message: '密碼更新成功（處理中）' };
 }
 
 /**
@@ -436,17 +513,73 @@ export function updateUserPassword(username: string, newPassword: string): { suc
  */
 export async function validateUserCredentialsAsync(username: string, password: string): Promise<boolean> {
   const users = await getAllUsersAsync();
-  const user = users.find(u => u.username === username && u.password === password);
-  return !!user;
+  const user = users.find(u => u.username === username);
+  
+  if (!user) {
+    return false;
+  }
+
+  // 使用哈希驗證密碼
+  return await verifyPassword(password, user.passwordHash, user.passwordSalt);
 }
 
 /**
  * 驗證用戶憑證（同步版本，用於向後兼容）
+ * 注意：此函數實際上是異步的，但為了向後兼容保持同步接口
+ * 實際驗證會異步進行，首次調用可能返回 false，但會觸發遷移
  */
 export function validateUserCredentials(username: string, password: string): boolean {
-  const users = getAllUsersLocal();
-  const user = users.find(u => u.username === username && u.password === password);
-  return !!user;
+  // 由於密碼驗證需要異步操作，我們需要異步處理
+  // 但為了向後兼容，我們先嘗試同步查找用戶
+  const localUsers = getAllUsersLocal();
+  const user = localUsers.find(u => u.username === username);
+  
+  if (!user) {
+    // 如果本地沒有，嘗試異步獲取並驗證
+    validateUserCredentialsAsync(username, password).catch(() => false);
+    return false;
+  }
+
+  // 如果是舊格式，需要異步遷移和驗證
+  if (isLegacyUserFormat(user)) {
+    // 異步處理遷移和驗證
+    migrateUserIfNeeded(user).then(async (migratedUser) => {
+      const isValid = await verifyPassword(password, migratedUser.passwordHash, migratedUser.passwordSalt);
+      if (isValid) {
+        // 保存遷移後的用戶
+        getAllUsersAsync().then(users => {
+          const index = users.findIndex(u => u.username === username);
+          if (index === -1) {
+            users.push(migratedUser);
+          } else {
+            users[index] = migratedUser;
+          }
+          saveUsers(users).catch(err => console.error('保存遷移失敗:', err));
+        });
+      }
+    }).catch(() => false);
+    
+    // 臨時使用明文比較（僅用於向後兼容的過渡期）
+    return (user as LegacyUser).password === password;
+  }
+
+  // 如果是新格式，需要異步驗證，但為了同步接口，先返回 false
+  // 實際驗證會在異步中進行
+  if ('passwordHash' in user && 'passwordSalt' in user) {
+    verifyPassword(password, (user as User).passwordHash, (user as User).passwordSalt)
+      .then(isValid => {
+        if (!isValid) {
+          console.warn('密碼驗證失敗');
+        }
+      })
+      .catch(() => false);
+    // 由於是異步操作，同步函數無法等待結果
+    // 這裡返回 false，實際驗證在異步中進行
+    // 建議使用 validateUserCredentialsAsync
+    return false;
+  }
+
+  return false;
 }
 
 /**
@@ -468,9 +601,18 @@ export function isAdmin(username: string): boolean {
 }
 
 /**
- * 獲取用戶信息
+ * 獲取用戶信息（異步版本，推薦使用）
  */
-export function getUserInfo(username: string): User | null {
+export async function getUserInfoAsync(username: string): Promise<User | null> {
+  const users = await getAllUsersAsync();
+  return users.find(u => u.username === username) || null;
+}
+
+/**
+ * 獲取用戶信息（同步版本，用於向後兼容）
+ * 注意：可能返回舊格式，建議使用異步版本
+ */
+export function getUserInfo(username: string): (User | LegacyUser) | null {
   const users = getAllUsersLocal();
   return users.find(u => u.username === username) || null;
 }
@@ -488,23 +630,33 @@ export function setupUsersRealtimeSync(
   try {
     const usersRef = collection(db, USERS_COLLECTION);
     
-    const unsubscribe = onSnapshot(usersRef, (querySnapshot) => {
+    const unsubscribe = onSnapshot(usersRef, async (querySnapshot) => {
       const users: User[] = [];
+      const migrationPromises: Promise<void>[] = [];
+      
       querySnapshot.forEach((doc) => {
         const userData = doc.data();
-        users.push({
-          username: userData.username,
-          password: userData.password,
-          isAdmin: userData.isAdmin || false,
+        // 檢查並遷移舊格式
+        const migrationPromise = migrateUserIfNeeded(userData).then(migratedUser => {
+          users.push(migratedUser);
+          // 如果進行了遷移，保存新格式
+          if (isLegacyUserFormat(userData)) {
+            saveUsers([migratedUser]).catch(err => console.error('遷移後保存失敗:', err));
+          }
         });
+        migrationPromises.push(migrationPromise);
       });
+      
+      await Promise.all(migrationPromises);
 
       // 確保默認管理員存在
       const adminExists = users.some(u => u.username === DEFAULT_ADMIN_USERNAME);
       if (!adminExists) {
+        const { hash, salt } = await hashPassword(DEFAULT_ADMIN_PASSWORD);
         users.push({
           username: DEFAULT_ADMIN_USERNAME,
-          password: DEFAULT_ADMIN_PASSWORD,
+          passwordHash: hash,
+          passwordSalt: salt,
           isAdmin: true,
         });
       }
@@ -530,25 +682,32 @@ export function setupUsersRealtimeSync(
           if (users.length > 0) {
             onUpdate(users);
           }
-        }).catch(() => {
-          // 如果也失敗，使用本地數據
-          const localUsers = getAllUsersLocal();
+        }).catch(async () => {
+          // 如果也失敗，使用本地數據並遷移
+          const localUsers = await getAllUsersAsync();
           onUpdate(localUsers);
         });
       } else {
         console.error('實時同步錯誤:', error);
-        // 對於其他錯誤，也嘗試使用本地數據
-        const localUsers = getAllUsersLocal();
-        onUpdate(localUsers);
+        // 對於其他錯誤，也嘗試使用本地數據並遷移
+        getAllUsersAsync().then(localUsers => {
+          onUpdate(localUsers);
+        }).catch(() => {
+          // 如果遷移也失敗，至少返回空數組
+          onUpdate([]);
+        });
       }
     });
 
     return unsubscribe;
   } catch (error) {
     console.error('設置實時同步失敗:', error);
-    // 發生錯誤時，使用本地數據
-    const localUsers = getAllUsersLocal();
-    onUpdate(localUsers);
+    // 發生錯誤時，使用本地數據並遷移
+    getAllUsersAsync().then(localUsers => {
+      onUpdate(localUsers);
+    }).catch(() => {
+      onUpdate([]);
+    });
     return () => {};
   }
 }

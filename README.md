@@ -49,17 +49,34 @@
 npm install
 ```
 
-### 2. 启动开发服务器
+### 2. 配置环境变量（可选，但推荐）
+
+如果使用 Firebase 云端同步功能，需要配置环境变量：
+
+1. 复制 `.env.example` 为 `.env`：
+   ```bash
+   cp .env.example .env
+   ```
+
+2. 编辑 `.env` 文件，填入您的 Firebase 配置信息
+   - 获取配置：访问 [Firebase Console](https://console.firebase.google.com/)
+   - 详细说明：参考 `FIREBASE_SETUP.md`
+
+**安全提示：** `.env` 文件已自动加入 `.gitignore`，不会被提交到版本控制。
+
+### 3. 启动开发服务器
 
 ```bash
 npm run dev
 ```
 
-### 3. 构建生产版本
+### 4. 构建生产版本
 
 ```bash
 npm run build
 ```
+
+**生产环境部署：** 在部署平台（如 Vercel）设置环境变量，不要将 `.env` 文件部署到生产环境。
 
 ## 使用说明
 
