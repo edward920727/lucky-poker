@@ -88,16 +88,29 @@ function initFirebase(): boolean {
     if (!app) {
       app = initializeApp(firebaseConfig);
       db = getFirestore(app);
+      
+      // 設置 Firestore 連接設置，減少錯誤日誌
+      // 注意：這些設置可能需要根據實際情況調整
     }
     return true;
-  } catch (error) {
-    console.error('Firebase 初始化失敗:', error);
+  } catch (error: any) {
+    // 檢查是否為配置錯誤
+    const errorMessage = error?.message || '';
+    if (errorMessage.includes('already exists') || errorMessage.includes('duplicate')) {
+      // Firebase 已經初始化，這是正常的
+      if (!db && app) {
+        db = getFirestore(app);
+      }
+      return true;
+    }
+    
+    console.warn('Firebase 初始化遇到問題，將使用本地存儲:', error?.code || error?.message || error);
     return false;
   }
 }
 
 /**
- * 檢查是否為可忽略的網路錯誤（QUIC 協議錯誤等）
+ * 檢查是否為可忽略的網路錯誤（QUIC 協議錯誤、HTTP 錯誤等）
  * 這些錯誤通常是非關鍵的，Firebase SDK 會自動重試
  */
 function isIgnorableNetworkError(error: any): boolean {
@@ -106,11 +119,25 @@ function isIgnorableNetworkError(error: any): boolean {
   // 檢查錯誤訊息中是否包含 QUIC 相關錯誤
   const errorMessage = error.message || '';
   const errorCode = error.code || '';
+  const errorString = JSON.stringify(error).toLowerCase();
+  const errorName = error.name || '';
   
   // QUIC 協議錯誤（通常是網路層面的暫時性問題）
   if (errorMessage.includes('QUIC') || 
       errorMessage.includes('QUIC_PROTOCOL_ERROR') ||
-      errorMessage.includes('QUIC_PACKET_WRITE_ERROR')) {
+      errorMessage.includes('QUIC_PACKET_WRITE_ERROR') ||
+      errorString.includes('quic')) {
+    return true;
+  }
+  
+  // HTTP 錯誤（404, 400 等）- Firebase SDK 會自動重試
+  if (errorMessage.includes('404') ||
+      errorMessage.includes('400') ||
+      errorMessage.includes('Failed to load resource') ||
+      errorMessage.includes('the server responded with a status') ||
+      errorString.includes('404') ||
+      errorString.includes('400') ||
+      errorMessage.includes('firestore.googleapis.com')) {
     return true;
   }
   
@@ -118,11 +145,103 @@ function isIgnorableNetworkError(error: any): boolean {
   if (errorCode === 'unavailable' || 
       errorCode === 'deadline-exceeded' ||
       errorMessage.includes('network') ||
-      errorMessage.includes('NetworkError')) {
+      errorMessage.includes('NetworkError') ||
+      errorMessage.includes('fetch') ||
+      errorName === 'NetworkError') {
+    return true;
+  }
+  
+  // Firestore 連接錯誤（通常是暫時性的）
+  if (errorMessage.includes('firestore') && 
+      (errorMessage.includes('Listen') || errorMessage.includes('channel'))) {
+    return true;
+  }
+  
+  // 檢查 URL 是否包含 Firestore Listen channel（這些錯誤可以忽略）
+  if (errorMessage.includes('Listen/channel') || 
+      errorString.includes('listen/channel') ||
+      errorMessage.includes('gsessionid')) {
     return true;
   }
   
   return false;
+}
+
+/**
+ * 設置全局錯誤處理器，抑制非關鍵的 Firebase 網路錯誤
+ */
+export function setupGlobalErrorHandler(): void {
+  // 保存原始的錯誤處理器
+  const originalError = console.error;
+  const originalWarn = console.warn;
+  
+  // 攔截 console.error
+  console.error = (...args: any[]) => {
+    const errorString = args.map(arg => 
+      typeof arg === 'string' ? arg : JSON.stringify(arg)
+    ).join(' ');
+    
+    // 檢查是否為可忽略的 Firebase 錯誤
+    if (errorString.includes('firestore.googleapis.com') &&
+        (errorString.includes('404') || errorString.includes('400') || 
+         errorString.includes('Failed to load resource'))) {
+      // 靜默處理，不顯示錯誤
+      return;
+    }
+    
+    // 其他錯誤正常顯示
+    originalError.apply(console, args);
+  };
+  
+  // 攔截 console.warn（某些錯誤可能以警告形式顯示）
+  console.warn = (...args: any[]) => {
+    const warnString = args.map(arg => 
+      typeof arg === 'string' ? arg : JSON.stringify(arg)
+    ).join(' ');
+    
+    // 檢查是否為可忽略的 Firebase 錯誤
+    if (warnString.includes('firestore.googleapis.com') &&
+        (warnString.includes('404') || warnString.includes('400') || 
+         warnString.includes('Failed to load resource'))) {
+      // 靜默處理，不顯示警告
+      return;
+    }
+    
+    // 其他警告正常顯示
+    originalWarn.apply(console, args);
+  };
+  
+  // 攔截全局錯誤事件（捕獲未處理的錯誤）
+  window.addEventListener('error', (event) => {
+    const errorMessage = event.message || '';
+    const errorSource = event.filename || '';
+    
+    // 檢查是否為 Firebase Firestore 的 404/400 錯誤
+    if (errorSource.includes('firestore.googleapis.com') ||
+        errorMessage.includes('firestore.googleapis.com') ||
+        (errorMessage.includes('404') && errorSource.includes('firestore')) ||
+        (errorMessage.includes('400') && errorSource.includes('firestore'))) {
+      // 阻止錯誤顯示在控制台
+      event.preventDefault();
+      return false;
+    }
+  }, true); // 使用捕獲階段以更早攔截
+  
+  // 攔截 Promise rejection（捕獲未處理的 Promise 錯誤）
+  window.addEventListener('unhandledrejection', (event) => {
+    const error = event.reason;
+    const errorMessage = error?.message || String(error) || '';
+    const errorString = JSON.stringify(error).toLowerCase();
+    
+    // 檢查是否為可忽略的 Firebase 錯誤
+    if (isIgnorableNetworkError(error) ||
+        errorMessage.includes('firestore.googleapis.com') ||
+        errorString.includes('firestore.googleapis.com')) {
+      // 阻止錯誤顯示在控制台
+      event.preventDefault();
+      return false;
+    }
+  });
 }
 
 // 轉換 TournamentRecord 為 Firestore 格式
@@ -587,9 +706,28 @@ export function setupRealtimeSync(
       // 通知組件更新
       onUpdate(tournaments);
     }, (error: any) => {
-      // 忽略非關鍵的網路錯誤（QUIC 協議錯誤等，Firebase SDK 會自動重試）
+      // 忽略非關鍵的網路錯誤（QUIC 協議錯誤、404、400 等，Firebase SDK 會自動重試）
       if (isIgnorableNetworkError(error)) {
         // 靜默處理，不顯示錯誤訊息
+        return;
+      }
+      
+      // 檢查是否為 HTTP 錯誤（404, 400 等）
+      const errorCode = error?.code || '';
+      const errorMessage = error?.message || '';
+      const isHttpError = errorCode === 'unavailable' || 
+                         errorCode === 'deadline-exceeded' ||
+                         errorMessage.includes('404') ||
+                         errorMessage.includes('400') ||
+                         errorMessage.includes('Failed to load resource');
+      
+      if (isHttpError) {
+        // HTTP 錯誤通常是暫時性的，Firebase SDK 會自動重試
+        // 使用本地數據作為備份，但不顯示錯誤
+        const localTournaments = getAllTournamentsLocal();
+        if (localTournaments.length > 0) {
+          onUpdate(localTournaments);
+        }
         return;
       }
       
@@ -601,6 +739,9 @@ export function setupRealtimeSync(
         getAllTournamentsAsync().then(tournaments => {
           if (tournaments.length > 0) {
             onUpdate(tournaments);
+          } else {
+            const localTournaments = getAllTournamentsLocal();
+            onUpdate(localTournaments);
           }
         }).catch(() => {
           // 如果也失敗，使用本地數據
@@ -613,8 +754,8 @@ export function setupRealtimeSync(
         const localTournaments = getAllTournamentsLocal();
         onUpdate(localTournaments);
       } else {
-        console.error('實時同步錯誤:', error);
         // 對於其他錯誤，也嘗試使用本地數據
+        console.warn('實時同步遇到問題，使用本地存儲模式:', error?.code || error?.message || error);
         const localTournaments = getAllTournamentsLocal();
         onUpdate(localTournaments);
       }

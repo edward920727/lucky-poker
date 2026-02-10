@@ -222,6 +222,7 @@ export interface ICMCalculationParams {
   totalGroups: number;                 // 總買入組數
   totalDeduction: number;               // 單場總提撥金（整場固定一次）
   topThreeSplit: [number, number, number]; // 前三名提撥獎金獲得比例 [第一名%, 第二名%, 第三名%]
+  activityBonus?: number;              // 單場活動獎金（從總獎金池額外抽出，不分配給玩家）
 }
 
 /**
@@ -229,24 +230,37 @@ export interface ICMCalculationParams {
  * 
  * 計算邏輯：
  * 第一步：總獎金池 = (單組報名費 - 行政費) × 總組數
- * 第二步：淨獎池 = 總獎金池 - 單場總提撥金
- * 第三步：提撥分配 = 將提撥金按 50% / 30% / 20% 分配給前三名
- * 第四步：最終獎金 = (個人籌碼 / 總發行籌碼) × 淨獎池 + (前三名提撥獎金)
- * 第五步：所有獎金無條件捨去至百位數
+ * 第二步：淨獎池 = 總獎金池 - 活動獎金
+ * 第三步：提撥獎金從淨獎池扣除，按 50% / 30% / 20% 分配給前三名
+ * 第四步：最終分配給玩家的獎池 = 淨獎池 - 提撥獎金
+ * 第五步：最終獎金 = (個人籌碼 / 總發行籌碼) × 最終分配獎池 + (前三名提撥獎金)
+ * 第六步：所有獎金無條件捨去至百位數
+ * 
+ * 範例：6600報名費，15組，行政費600
+ * - 總獎金池 = (6600 - 600) × 15 = 90000
+ * - 活動獎金 = 500
+ * - 淨獎池 = 90000 - 500 = 89500
+ * - 提撥獎金 = 500（從淨獎池扣除）
+ * - 最終分配獎池 = 89500 - 500 = 89000
  */
 export function calculateICMPrize(
   params: ICMCalculationParams,
   players: Player[]
 ): PrizeCalculationResult {
-  const { entryFee, administrativeFee, totalGroups, totalDeduction, topThreeSplit } = params;
+  const { entryFee, administrativeFee, totalGroups, totalDeduction, topThreeSplit, activityBonus = 0 } = params;
 
   // 第一步：總獎金池 = (單組報名費 - 行政費) × 總組數
   const totalPrizePool = (entryFee - administrativeFee) * totalGroups;
 
-  // 第二步：淨獎池 = 總獎金池 - 單場總提撥金
-  const netPool = totalPrizePool - totalDeduction;
+  // 第二步：淨獎池 = 總獎金池 - 活動獎金
+  const netPool = totalPrizePool - activityBonus;
+
+  // 第三步：提撥獎金從淨獎池扣除（不是從總獎金池扣除）
+  // 最終分配給玩家的獎池 = 淨獎池 - 提撥獎金
+  const finalDistributionPool = netPool - totalDeduction;
 
   // 第三步：提撥分配 = 將單場總提撥金按獲得比例分配給前三名
+  // 確保分配總額嚴格等於總提撥額（無差異）
   const topThreeGuaranteedPrizes: TopThreePrize[] = [];
   let topThreeTotal = 0;
 
@@ -254,25 +268,111 @@ export function calculateICMPrize(
   const sortedPlayers = [...players].sort((a, b) => b.currentChips - a.currentChips);
   const eligibleTopThree = sortedPlayers.filter(p => p.currentChips > 0).slice(0, 3);
 
-  for (let i = 0; i < Math.min(3, eligibleTopThree.length); i++) {
-    const percentage = topThreeSplit[i] || 0;
-    const originalAmount = (totalDeduction * percentage) / 100;
-    // 無條件捨去至百位
-    const amount = Math.floor(originalAmount / 100) * 100;
+  const topThreeCount = Math.min(3, eligibleTopThree.length);
+  
+  if (topThreeCount > 0 && totalDeduction > 0) {
+    // 使用整數計算，避免浮點數精度問題
+    // 將總提撥額轉換為整數（如果原本就是整數，保持不變）
+    const totalDeductionInt = Math.round(totalDeduction);
     
-    topThreeGuaranteedPrizes.push({
-      rank: i + 1,
-      percentage,
-      amount,
+    // 調試信息：確認使用的總提撥額（始終顯示，方便調試）
+    console.log('🔍 提撥獎金計算開始:', {
+      傳入的totalDeduction: totalDeduction,
+      使用的totalDeductionInt: totalDeductionInt,
+      分配比例: topThreeSplit,
+      前三名人數: topThreeCount,
     });
-    topThreeTotal += amount;
-  }
-
-  // 處理前三名提撥獎金的捨去誤差（加到第一名）
-  const deductionRemainder = totalDeduction - topThreeTotal;
-  if (topThreeGuaranteedPrizes.length > 0 && deductionRemainder > 0) {
-    topThreeGuaranteedPrizes[0].amount += deductionRemainder;
-    topThreeTotal += deductionRemainder;
+    
+    let remainingAmount = totalDeductionInt;
+    
+    // 分配金額，確保總和嚴格等於總提撥額
+    for (let i = 0; i < topThreeCount; i++) {
+      const percentage = topThreeSplit[i] || 0;
+      let amount: number;
+      
+      if (i === topThreeCount - 1) {
+        // 最後一個名次：使用剩餘金額，確保總和等於總提撥額
+        amount = remainingAmount;
+      } else {
+        // 前面的名次：計算應得金額並四捨五入到整數
+        // 確保使用 totalDeductionInt，不是其他值
+        const exactAmount = (totalDeductionInt * percentage) / 100;
+        amount = Math.round(exactAmount);
+        // 更新剩餘金額
+        remainingAmount -= amount;
+      }
+      
+      // 確保金額不為負數
+      if (amount < 0) {
+        amount = 0;
+      }
+      
+      // 調試信息（始終顯示，方便調試）
+      console.log(`🔍 第${i + 1}名計算:`, {
+        比例: percentage + '%',
+        計算公式: `${totalDeductionInt} × ${percentage}%`,
+        精確金額: (totalDeductionInt * percentage) / 100,
+        分配金額: amount,
+        剩餘金額: remainingAmount,
+      });
+      
+      topThreeGuaranteedPrizes.push({
+        rank: i + 1,
+        percentage: topThreeSplit[i] || 0,
+        amount,
+      });
+      topThreeTotal += amount;
+    }
+    
+    // 最終驗證和調整：確保總和嚴格等於總提撥額
+    // 重新計算實際總和（避免累積誤差）
+    const actualTotal = topThreeGuaranteedPrizes.reduce((sum, p) => sum + p.amount, 0);
+    const finalDifference = totalDeductionInt - actualTotal;
+    
+    if (Math.abs(finalDifference) > 0.0001 && topThreeGuaranteedPrizes.length > 0) {
+      // 將差額加到第一名，確保總和等於總提撥額
+      const originalFirstAmount = topThreeGuaranteedPrizes[0].amount;
+      topThreeGuaranteedPrizes[0].amount += finalDifference;
+      topThreeTotal = totalDeductionInt; // 直接設為總提撥額，確保一致
+      
+      // 調試信息（始終顯示，方便調試）
+      console.log('🔍 調整差額:', {
+        實際總和: actualTotal,
+        總提撥額: totalDeductionInt,
+        差額: finalDifference,
+        第一名原金額: originalFirstAmount,
+        調整後第一名金額: topThreeGuaranteedPrizes[0].amount,
+      });
+    } else {
+      // 即使沒有差額，也確保 topThreeTotal 等於實際總和
+      topThreeTotal = actualTotal;
+    }
+    
+    // 最終驗證：確保總和等於總提撥額
+    const finalVerification = topThreeGuaranteedPrizes.reduce((sum, p) => sum + p.amount, 0);
+    const verification = Math.abs(totalDeductionInt - finalVerification);
+    
+    if (verification > 0.0001) {
+      console.error('提撥獎金分配驗證失敗:', {
+        總提撥額: totalDeductionInt,
+        分配總額: finalVerification,
+        差異: verification,
+        各名次金額: topThreeGuaranteedPrizes.map(p => ({ rank: p.rank, amount: p.amount })),
+      });
+      
+      // 強制修正：直接調整第一名金額，確保總和等於總提撥額
+      const correction = totalDeductionInt - finalVerification;
+      topThreeGuaranteedPrizes[0].amount += correction;
+      topThreeTotal = totalDeductionInt;
+      
+      console.warn('已強制修正差額:', {
+        修正金額: correction,
+        修正後第一名金額: topThreeGuaranteedPrizes[0].amount,
+        最終總和: topThreeGuaranteedPrizes.reduce((sum, p) => sum + p.amount, 0),
+      });
+    } else {
+      topThreeTotal = finalVerification;
+    }
   }
 
   // 第四步：計算所有玩家的最終獎金
@@ -300,8 +400,8 @@ export function calculateICMPrize(
     // 計算籌碼占比
     const chipPercentage = totalChips > 0 ? (player.currentChips / totalChips) * 100 : 0;
     
-    // 計算按籌碼占比分配的淨獎池部分
-    const chipBasedAmount = (netPool * chipPercentage) / 100;
+    // 計算按籌碼占比分配的最終分配獎池部分（淨獎池 - 提撥獎金）
+    const chipBasedAmount = (finalDistributionPool * chipPercentage) / 100;
     // 無條件捨去至百位
     const chipBasedRounded = Math.floor(chipBasedAmount / 100) * 100;
 
@@ -310,7 +410,7 @@ export function calculateICMPrize(
     const isTopThree = playerIndexInTopThree >= 0 && playerIndexInTopThree < 3;
     const topThreeBonus = isTopThree ? (topThreeGuaranteedPrizes[playerIndexInTopThree]?.amount || 0) : 0;
 
-    // 第四步：最終獎金 = (個人籌碼 / 總發行籌碼) × 淨獎池 + (前三名提撥獎金)
+    // 第五步：最終獎金 = (個人籌碼 / 總發行籌碼) × 最終分配獎池 + (前三名提撥獎金)
     const finalPrize = chipBasedRounded + topThreeBonus;
     // 第五步：無條件捨去至百位（雖然前面已經捨去，但確保最終結果也捨去）
     const finalPrizeRounded = Math.floor(finalPrize / 100) * 100;
@@ -326,13 +426,19 @@ export function calculateICMPrize(
     });
   }
 
-  // 計算總分配金額
+  // 計算總分配金額（所有玩家獎金總和）
   const totalDistributed = finalPlayerPrizes.reduce((sum, p) => sum + p.prizeAmount, 0);
-  const remainder = totalPrizePool - totalDistributed;
+  
+  // ⚠️ 重要：所有玩家獎金總和應該等於淨獎池（不是總獎池）
+  // 淨獎池 = 總獎池 - 活動獎金
+  // 所有玩家獎金 = 最終分配獎池 + 提撥獎金 = 淨獎池
+  const netPoolForVerification = totalPrizePool - activityBonus;
+  const remainder = netPoolForVerification - totalDistributed;
 
   // 將差額加到第一名（處理捨去誤差）
+  // 這個差額是淨獎池的差額，確保所有玩家獎金總和等於淨獎池
   let adjustmentAmount = 0;
-  if (finalPlayerPrizes.length > 0 && remainder !== 0) {
+  if (finalPlayerPrizes.length > 0 && Math.abs(remainder) > 0.01) {
     adjustmentAmount = remainder;
     finalPlayerPrizes[0].prizeAmount += remainder;
     // 確保第一名金額不為負數
@@ -340,11 +446,35 @@ export function calculateICMPrize(
       finalPlayerPrizes[0].prizeAmount = 0;
       adjustmentAmount = -finalPlayerPrizes[0].prizeAmount;
     }
-    // 同時更新前三名保底獎金（如果第一名是前三名）
-    if (topThreeGuaranteedPrizes.length > 0) {
-      topThreeGuaranteedPrizes[0].amount += remainder;
-      topThreeTotal += remainder;
-    }
+    
+    console.log('🔍 淨獎池差額調整:', {
+      總獎池: totalPrizePool,
+      活動獎金: activityBonus,
+      淨獎池: netPoolForVerification,
+      已分配總額: totalDistributed,
+      差額: remainder,
+      調整後第一名最終獎金: finalPlayerPrizes[0].prizeAmount,
+      最終總和: finalPlayerPrizes.reduce((sum, p) => sum + p.prizeAmount, 0),
+      注意: '差額只加到最終獎金，確保所有玩家獎金總和等於淨獎池',
+    });
+  }
+
+  // 最終驗證：確保所有玩家獎金總和等於淨獎池
+  const finalTotalDistributed = finalPlayerPrizes.reduce((sum, p) => sum + p.prizeAmount, 0);
+  const netPoolFinal = totalPrizePool - activityBonus;
+  const finalVerification = Math.abs(netPoolFinal - finalTotalDistributed);
+  
+  if (finalVerification > 0.01) {
+    console.warn('⚠️ 淨獎池驗證失敗:', {
+      淨獎池: netPoolFinal,
+      所有玩家獎金總和: finalTotalDistributed,
+      差異: finalVerification,
+    });
+  } else {
+    console.log('✓ 淨獎池驗證通過:', {
+      淨獎池: netPoolFinal,
+      所有玩家獎金總和: finalTotalDistributed,
+    });
   }
 
   return {
@@ -353,8 +483,8 @@ export function calculateICMPrize(
     totalPrizePool,
     topThreeTotal,
     chipBasedTotal: finalPlayerPrizes.reduce((sum, p) => sum + p.chipBasedPrize, 0),
-    remainingPrizePool: netPool,
-    totalDistributed: finalPlayerPrizes.reduce((sum, p) => sum + p.prizeAmount, 0),
+    remainingPrizePool: finalDistributionPool, // 最終分配給玩家的獎池（淨獎池 - 提撥獎金）
+    totalDistributed: finalTotalDistributed, // 所有玩家獎金總和（應該等於淨獎池）
     adjustmentAmount,
   };
 }

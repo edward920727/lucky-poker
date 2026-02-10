@@ -11,6 +11,7 @@ export interface CustomTournamentConfig {
   prizePerGroup?: number; // 獎金池單價（每組）
   totalDeduction?: number; // 單次總提撥（整場固定一次，不是每組）
   topThreeSplit?: [number, number, number]; // 前三名提撥獎金獲得比例 [第一名%, 第二名%, 第三名%]（可選）
+  activityBonus?: number; // 單場活動獎金（從總獎金池額外抽出，不分配給玩家）
 }
 
 /**
@@ -34,6 +35,7 @@ export interface TournamentRecord {
   deductionPerGroup?: number; // 單組提撥金（可選）
   totalDeduction?: number; // 總提撥金（單組提撥金 × 組數）
   totalPrizePool?: number; // 總獎池（總收入 - 總行政費 - 總提撥金，或使用自定義單組獎金 × 組數）
+  activityBonus?: number; // 單場活動獎金（從總獎金池額外抽出，不分配給玩家）
   players: Player[]; // 玩家列表（包含会编、买入次数、起始码等）
   expectedTotalChips: number; // 理论总码量
   actualTotalChips: number; // 实际总码量

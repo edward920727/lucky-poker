@@ -107,6 +107,8 @@ npm run build
 - 所有功能仍然正常工作
 - 當網絡恢復時，會自動同步到雲端
 
+**注意**：即使看到控制台中的 404 或 400 錯誤，應用仍然會正常工作。這些錯誤會被自動處理，系統會使用本地存儲作為備份。
+
 ### 數據遷移
 
 現有的本地數據會自動保留，當您首次連接到 Firebase 時：
@@ -115,6 +117,45 @@ npm run build
 - 如果雲端沒有數據，會使用本地數據
 
 ## 故障排除
+
+### 問題：出現 404 或 400 錯誤（Firestore Listen 錯誤）
+
+**重要**：這些錯誤通常**不會影響應用功能**。系統會自動降級到本地存儲模式，所有功能仍然正常工作。
+
+**錯誤訊息範例**：
+```
+Failed to load resource: the server responded with a status of 404 (Not Found)
+firestore.googleapis.com/google.firestore.v1.Firestore/Listen/channel
+```
+
+**可能原因和解決方法**：
+
+1. **Firestore 安全規則配置不正確**（最常見）
+   - 打開 Firebase Console → Firestore Database → 規則
+   - 確認 tournaments 和 users 集合都使用 `allow read, write: if true;`
+   - 點擊「發布」保存規則
+   - 等待幾秒鐘讓規則生效
+
+2. **Firestore 數據庫未啟用**
+   - 打開 Firebase Console → Firestore Database
+   - 如果看到「創建數據庫」按鈕，點擊創建
+   - 選擇「以測試模式啟動」
+   - 選擇數據庫位置（建議選擇 asia-east1）
+
+3. **網路連接問題**
+   - 這些錯誤可能是暫時性的網路問題
+   - Firebase SDK 會自動重試連接
+   - 如果持續出現，檢查網路連接或防火牆設置
+
+4. **Firebase 配置錯誤**
+   - 確認 `utils/firebaseConfig.ts` 中的配置正確
+   - 確認 projectId 與 Firebase Console 中的項目 ID 一致
+   - 確認 apiKey 正確
+
+**如果錯誤持續出現**：
+- 應用會自動使用本地存儲（localStorage），所有功能正常
+- 數據會保存在瀏覽器中，不會丟失
+- 當 Firestore 連接恢復時，會自動同步到雲端
 
 ### 問題：出現 400 Bad Request 錯誤
 

@@ -102,8 +102,16 @@ export default function TournamentSelector({ onSelect, onCreateCustom, onOpenSet
 
             <div className="relative z-10">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-poker-gold-400 to-poker-gold-600 flex items-center justify-center border-2 border-poker-gold-300 shadow-lg">
-                  <span className="text-2xl font-bold text-white">{type}</span>
+                <div className={`rounded-full bg-gradient-to-br from-poker-gold-400 to-poker-gold-600 flex items-center justify-center border-2 border-poker-gold-300 shadow-lg ${
+                  type.length <= 3 ? 'w-12 h-12' : 
+                  type.length === 4 ? 'w-14 h-14' : 
+                  'w-16 h-16'
+                }`}>
+                  <span className={`font-bold text-white ${
+                    type.length <= 3 ? 'text-2xl' : 
+                    type.length === 4 ? 'text-xl' : 
+                    'text-lg'
+                  }`}>{type}</span>
                 </div>
                 <div className="text-3xl md:text-4xl font-display font-bold text-black group-hover:text-gray-800 transition-colors">
                   {config.name}

@@ -128,6 +128,11 @@ export function updateTournament(tournament: TournamentRecord): void {
     
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tournaments));
     
+    // 觸發自定義事件，通知其他組件數據已更新
+    window.dispatchEvent(new CustomEvent('tournament-updated', {
+      detail: { tournamentId: tournament.id }
+    }));
+    
     // 異步同步到雲端（不阻塞）
     updateTournamentCloud(tournaments[index]).catch(err => {
       console.error('雲端同步失敗（不影響本地更新）:', err);

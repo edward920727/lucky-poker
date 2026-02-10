@@ -28,6 +28,7 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
   const [isManualTotalDeduction, setIsManualTotalDeduction] = useState(false); // 是否手動設定提撥獎金
   const [deduction, setDeduction] = useState<number>(defaultDeduction);
   const [totalDeduction, setTotalDeduction] = useState<number>(0); // 單場總提撥金
+  const [activityBonus, setActivityBonus] = useState<number>(isCustom ? (customConfig.activityBonus || 0) : 0); // 單場活動獎金
   const [topThreeSplit, setTopThreeSplit] = useState<[number, number, number]>([50, 30, 20]); // 前三名提撥獎金獲得比例
 
   // 計算總買入次數（所有玩家的 buyInCount 總和）
@@ -46,6 +47,7 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
       if (isCustom && customConfig) {
         setEntryFee(customConfig.entryFee);
         setDeduction(customConfig.administrativeFee);
+        setActivityBonus(customConfig.activityBonus || 0);
         if (!isManualTotalDeduction) {
           setTotalDeduction(customConfig.totalDeduction || 0);
         }
@@ -56,6 +58,8 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
         // 使用 ICM 獎勵結構自動獲取配置
         const autoDeduction = getAdministrativeFee(newEntryFee);
         setDeduction(autoDeduction);
+        // 標準賽事預設不額外抽活動獎金（如需可手動輸入）
+        setActivityBonus(0);
         if (!isManualTotalDeduction) {
           const icmStructure = getICMRewardStructure(newEntryFee);
           if (icmStructure) {
@@ -73,6 +77,7 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
   // 所有賽事都使用新的ICM計算邏輯
   // 第一步：總獎金池 = (單組報名費 - 行政費) × 總組數
   const totalPrizePool = (entryFee - deduction) * totalGroups;
+  const poolAfterActivityBonus = totalPrizePool - activityBonus;
   
   // 使用新的ICM計算函數（所有賽事統一使用）
   const calculationResult = calculateICMPrize(
@@ -81,6 +86,7 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
       administrativeFee: deduction,
       totalGroups,
       totalDeduction,
+      activityBonus,
       topThreeSplit,
     },
     players
@@ -126,305 +132,526 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
 
       {/* 內容區域 - 可展開/收合 */}
       {isExpanded && (
-        <div className="animate-fadeIn">
-          {/* 輸入區域 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-6">
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium">報名費 (NT$)</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="manualEntryFee"
-                checked={isManualEntryFee}
-                onChange={(e) => {
-                  setIsManualEntryFee(e.target.checked);
-                  if (!e.target.checked && tournamentType) {
-                    setEntryFee(parseInt(tournamentType));
-                  }
-                }}
-                className="w-4 h-4 rounded border-poker-gold-600 bg-gray-800 text-poker-gold-600 focus:ring-poker-gold-500"
-              />
-              <label htmlFor="manualEntryFee" className="text-xs text-gray-400 cursor-pointer">
-                手動設定
-              </label>
-            </div>
-          </div>
-          <div className="relative">
-            <input
-              type="number"
-              value={entryFee}
-              onChange={(e) => {
-                setEntryFee(parseInt(e.target.value) || 0);
-                setIsManualEntryFee(true);
-              }}
-              className={`w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                !isManualEntryFee ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : ''
-              }`}
-              disabled={!isManualEntryFee}
-            />
-            {!isManualEntryFee && tournamentType && (
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-poker-gold-400">
-                自動：{tournamentType}
-              </div>
-            )}
-          </div>
-          {!isManualEntryFee && tournamentType && (
-            <p className="text-xs text-gray-500 mt-1">
-              💡 自動設定：根據賽事類型 = NT$ {tournamentType}
-            </p>
-          )}
-        </div>
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium">總組數</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="manualGroups"
-                checked={isManualGroups}
-                onChange={(e) => {
-                  setIsManualGroups(e.target.checked);
-                  if (!e.target.checked) {
-                    setTotalGroups(totalBuyInCount);
-                  }
-                }}
-                className="w-4 h-4 rounded border-poker-gold-600 bg-gray-800 text-poker-gold-600 focus:ring-poker-gold-500"
-              />
-              <label htmlFor="manualGroups" className="text-xs text-gray-400 cursor-pointer">
-                手動設定
-              </label>
-            </div>
-          </div>
-          <div className="relative">
-            <input
-              type="number"
-              value={totalGroups}
-              onChange={(e) => {
-                setTotalGroups(parseInt(e.target.value) || 0);
-                setIsManualGroups(true);
-              }}
-              className={`w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                !isManualGroups ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : ''
-              }`}
-              disabled={!isManualGroups}
-            />
-            {!isManualGroups && (
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-poker-gold-400">
-                自動：{totalBuyInCount}
-              </div>
-            )}
-          </div>
-          {!isManualGroups && (
-            <p className="text-xs text-gray-500 mt-1">
-              💡 自動計算：總買入次數 = {totalBuyInCount} 組
-            </p>
-          )}
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">行政費 (NT$)</label>
-          <div className="relative">
-            <input
-              type="number"
-              value={deduction || ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === '' || value === null || value === undefined) {
-                  setDeduction(0);
-                  return;
-                }
-                const numValue = parseFloat(value);
-                if (!isNaN(numValue)) {
-                  setDeduction(Math.max(0, numValue));
-                }
-              }}
-              className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            {!isCustom && tournamentType && getAdministrativeFee(parseInt(tournamentType)) > 0 && (
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-poker-gold-400">
-                自動：{getAdministrativeFee(parseInt(tournamentType))}
-              </div>
-            )}
-          </div>
-          {!isCustom && tournamentType && getAdministrativeFee(parseInt(tournamentType)) > 0 && (
-            <p className="text-xs text-gray-500 mt-1">
-              💡 根據 ICM 獎勵結構自動計算：報名費 {tournamentType} → 行政費 {getAdministrativeFee(parseInt(tournamentType))}
-            </p>
-          )}
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">單場總提撥金 (NT$)</label>
-          <div className="relative">
-            <input
-              type="number"
-              value={totalDeduction || ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === '' || value === null || value === undefined) {
-                  setTotalDeduction(0);
-                  setIsManualTotalDeduction(true);
-                  return;
-                }
-                const numValue = parseFloat(value);
-                if (!isNaN(numValue)) {
-                  setTotalDeduction(Math.max(0, numValue));
-                  setIsManualTotalDeduction(true);
-                }
-              }}
-              className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            {!isCustom && tournamentType && (() => {
-              const icmStructure = getICMRewardStructure(parseInt(tournamentType));
-              return icmStructure && icmStructure.totalDeduction > 0 ? (
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
-                  <span className="text-xs text-poker-gold-400">
-                    自動：{icmStructure.totalDeduction}
-                  </span>
-                  {isManualTotalDeduction && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTotalDeduction(icmStructure.totalDeduction);
-                        setIsManualTotalDeduction(false);
+        <div className="animate-fadeIn space-y-6">
+          {/* 輸入區域 - 基本參數 */}
+          <div className="bg-gray-800 rounded-xl p-4 md:p-5 border border-gray-700">
+            <h3 className="text-lg font-semibold text-poker-gold-300 mb-4 flex items-center gap-2">
+              <span>⚙️</span>
+              <span>基本參數設定</span>
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* 報名費 */}
+              <div className="bg-gray-700 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-300">報名費 (NT$)</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="manualEntryFee"
+                      checked={isManualEntryFee}
+                      onChange={(e) => {
+                        setIsManualEntryFee(e.target.checked);
+                        if (!e.target.checked && tournamentType) {
+                          setEntryFee(parseInt(tournamentType));
+                        }
                       }}
-                      className="text-xs text-blue-400 hover:text-blue-300 underline"
-                      title="恢復自動值"
-                    >
-                      恢復
-                    </button>
+                      className="w-4 h-4 rounded border-poker-gold-600 bg-gray-800 text-poker-gold-600 focus:ring-poker-gold-500"
+                    />
+                    <label htmlFor="manualEntryFee" className="text-xs text-gray-400 cursor-pointer">
+                      手動
+                    </label>
+                  </div>
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={entryFee}
+                    onChange={(e) => {
+                      setEntryFee(parseInt(e.target.value) || 0);
+                      setIsManualEntryFee(true);
+                    }}
+                    className={`w-full px-3 py-2 bg-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-poker-gold-500 ${
+                      !isManualEntryFee ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : ''
+                    }`}
+                    disabled={!isManualEntryFee}
+                  />
+                  {!isManualEntryFee && tournamentType && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-poker-gold-400 font-semibold">
+                      自動：{tournamentType}
+                    </div>
                   )}
                 </div>
-              ) : null;
-            })()}
-          </div>
-          {!isCustom && tournamentType && (() => {
-            const icmStructure = getICMRewardStructure(parseInt(tournamentType));
-            return icmStructure && icmStructure.totalDeduction > 0 ? (
-              <p className="text-xs text-gray-500 mt-1">
-                💡 根據 ICM 獎勵結構自動計算：報名費 {tournamentType} → 單場總提撥 {icmStructure.totalDeduction}
-                {isManualTotalDeduction && (
-                  <span className="ml-2 text-orange-400">（已手動修改）</span>
+                {!isManualEntryFee && tournamentType && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 自動設定：NT$ {tournamentType}
+                  </p>
                 )}
-              </p>
-            ) : null;
-          })()}
-          {isCustom && customConfig && customConfig.totalDeduction && (
-            <p className="text-xs text-gray-500 mt-1">
-              💡 自定義賽事：單場總提撥 {customConfig.totalDeduction}
-            </p>
-          )}
-        </div>
-      </div>
+              </div>
 
-      {/* 總獎池顯示 */}
-      <div className={`p-4 rounded-lg mb-6 ${totalPrizePool >= 0 ? 'bg-green-600' : 'bg-red-600'}`}>
-        <div className="flex justify-between items-center">
-          <span className="text-lg font-semibold">第一步：總獎金池</span>
-          <span className="text-2xl font-bold">
-            NT$ {totalPrizePool.toLocaleString()}
-          </span>
-        </div>
-        <div className="text-sm mt-2 opacity-90">
-          (報名費 {entryFee.toLocaleString()} - 行政費 {deduction.toLocaleString()}) × {totalGroups} 組{!isManualGroups && ` (自動計算：${totalBuyInCount} 次買入)`} = {totalPrizePool.toLocaleString()}
-        </div>
-      </div>
-
-      {/* 淨獎池顯示 */}
-      <div className="p-4 rounded-lg mb-6 bg-blue-600">
-        <div className="flex justify-between items-center">
-          <span className="text-lg font-semibold">第二步：淨獎池</span>
-          <span className="text-2xl font-bold">
-            NT$ {remainingPrizePool.toLocaleString()}
-          </span>
-        </div>
-        <div className="text-sm mt-2 opacity-90">
-          總獎金池 {totalPrizePool.toLocaleString()} - 單場總提撥 {totalDeduction.toLocaleString()} = {remainingPrizePool.toLocaleString()}
-        </div>
-      </div>
-
-      {/* 前三名提撥獎金顯示 */}
-      {topThreePrizes.length > 0 && (
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold mb-3">第三步：前三名提撥獎金分配</h3>
-          <div className="space-y-3 mb-4">
-            {topThreePrizes.map((prize) => (
-              <div key={prize.rank} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 md:gap-4 bg-gray-700 p-4 rounded-lg">
-                <div className="w-full sm:w-20 text-center sm:text-left">
-                  <span className="text-base md:text-lg font-bold text-yellow-400">第 {prize.rank} 名</span>
-                </div>
-                <div className="flex-1 w-full">
-                  <label className="block text-sm text-gray-400 mb-1">獲得比例</label>
-                  <div className="px-3 py-2 bg-gray-600 rounded-lg text-center font-semibold">
-                    {prize.percentage}%
+              {/* 總組數 */}
+              <div className="bg-gray-700 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-300">總組數</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="manualGroups"
+                      checked={isManualGroups}
+                      onChange={(e) => {
+                        setIsManualGroups(e.target.checked);
+                        if (!e.target.checked) {
+                          setTotalGroups(totalBuyInCount);
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-poker-gold-600 bg-gray-800 text-poker-gold-600 focus:ring-poker-gold-500"
+                    />
+                    <label htmlFor="manualGroups" className="text-xs text-gray-400 cursor-pointer">
+                      手動
+                    </label>
                   </div>
                 </div>
-                <div className="w-full sm:w-40">
-                  <label className="block text-sm text-gray-400 mb-1">提撥獎金金額</label>
-                  <div className="px-3 py-2 bg-gray-600 rounded-lg text-right font-semibold">
-                    NT$ {prize.amount.toLocaleString()}
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={totalGroups}
+                    onChange={(e) => {
+                      setTotalGroups(parseInt(e.target.value) || 0);
+                      setIsManualGroups(true);
+                    }}
+                    className={`w-full px-3 py-2 bg-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-poker-gold-500 ${
+                      !isManualGroups ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : ''
+                    }`}
+                    disabled={!isManualGroups}
+                  />
+                  {!isManualGroups && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-poker-gold-400 font-semibold">
+                      自動：{totalBuyInCount}
+                    </div>
+                  )}
+                </div>
+                {!isManualGroups && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 自動計算：{totalBuyInCount} 組
+                  </p>
+                )}
+              </div>
+
+              {/* 行政費 */}
+              <div className="bg-gray-700 rounded-lg p-3">
+                <label className="block text-sm font-medium text-gray-300 mb-2">行政費 (NT$)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={deduction || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || value === null || value === undefined) {
+                        setDeduction(0);
+                        return;
+                      }
+                      const numValue = parseFloat(value);
+                      if (!isNaN(numValue)) {
+                        setDeduction(Math.max(0, numValue));
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
+                  />
+                  {!isCustom && tournamentType && getAdministrativeFee(parseInt(tournamentType)) > 0 && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-poker-gold-400 font-semibold">
+                      自動：{getAdministrativeFee(parseInt(tournamentType))}
+                    </div>
+                  )}
+                </div>
+                {!isCustom && tournamentType && getAdministrativeFee(parseInt(tournamentType)) > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 自動：{getAdministrativeFee(parseInt(tournamentType))}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 輸入區域 - 獎金設定 */}
+          <div className="bg-gray-800 rounded-xl p-4 md:p-5 border border-gray-700">
+            <h3 className="text-lg font-semibold text-poker-gold-300 mb-4 flex items-center gap-2">
+              <span>💰</span>
+              <span>獎金設定</span>
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* 活動獎金 */}
+              <div className="bg-gray-700 rounded-lg p-3">
+                <label className="block text-sm font-medium text-gray-300 mb-2">活動獎金 (NT$)</label>
+                <input
+                  type="number"
+                  value={activityBonus || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || value === null || value === undefined) {
+                      setActivityBonus(0);
+                      return;
+                    }
+                    const numValue = parseFloat(value);
+                    if (!isNaN(numValue)) {
+                      setActivityBonus(Math.max(0, numValue));
+                    }
+                  }}
+                  className="w-full px-3 py-2 bg-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
+                  placeholder="0"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  ⚠️ 從總獎金池額外抽出，不參與玩家分配
+                </p>
+              </div>
+
+              {/* 單場總提撥金 */}
+              <div className="bg-gray-700 rounded-lg p-3">
+                <label className="block text-sm font-medium text-gray-300 mb-2">單場總提撥金 (NT$)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={totalDeduction || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || value === null || value === undefined) {
+                        setTotalDeduction(0);
+                        setIsManualTotalDeduction(true);
+                        return;
+                      }
+                      const numValue = parseFloat(value);
+                      if (!isNaN(numValue)) {
+                        setTotalDeduction(Math.max(0, numValue));
+                        setIsManualTotalDeduction(true);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
+                    placeholder="0"
+                  />
+                  {!isCustom && tournamentType && (() => {
+                    const icmStructure = getICMRewardStructure(parseInt(tournamentType));
+                    return icmStructure && icmStructure.totalDeduction > 0 ? (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
+                        <span className="text-xs text-poker-gold-400 font-semibold">
+                          自動：{icmStructure.totalDeduction}
+                        </span>
+                        {isManualTotalDeduction && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTotalDeduction(icmStructure.totalDeduction);
+                              setIsManualTotalDeduction(false);
+                            }}
+                            className="text-xs text-blue-400 hover:text-blue-300 underline"
+                            title="恢復自動值"
+                          >
+                            恢復
+                          </button>
+                        )}
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+                {!isCustom && tournamentType && (() => {
+                  const icmStructure = getICMRewardStructure(parseInt(tournamentType));
+                  return icmStructure && icmStructure.totalDeduction > 0 ? (
+                    <p className="text-xs text-gray-500 mt-1">
+                      💡 自動：{icmStructure.totalDeduction}
+                      {isManualTotalDeduction && (
+                        <span className="ml-2 text-orange-400">（已手動修改）</span>
+                      )}
+                    </p>
+                  ) : null;
+                })()}
+                {isCustom && customConfig && customConfig.totalDeduction && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 自定義：{customConfig.totalDeduction}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 計算步驟顯示 */}
+          <div className="space-y-4">
+            {/* 第一步：總獎金池 */}
+            <div className={`p-4 md:p-5 rounded-xl border-2 ${
+              totalPrizePool >= 0 
+                ? 'bg-gradient-to-r from-green-600 to-green-700 border-green-500' 
+                : 'bg-gradient-to-r from-red-600 to-red-700 border-red-500'
+            } shadow-lg`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">1️⃣</span>
+                  <span className="text-lg md:text-xl font-bold text-white">總獎金池</span>
+                </div>
+                <span className="text-2xl md:text-3xl font-black text-white">
+                  NT$ {totalPrizePool.toLocaleString()}
+                </span>
+              </div>
+              <div className="text-sm md:text-base text-white/90 mt-2 bg-black/20 rounded-lg px-3 py-2">
+                (報名費 {entryFee.toLocaleString()} - 行政費 {deduction.toLocaleString()}) × {totalGroups} 組
+                {!isManualGroups && ` (自動：${totalBuyInCount} 次買入)`}
+              </div>
+            </div>
+
+            {/* 活動獎金扣除（如果有） */}
+            {activityBonus > 0 && (
+              <div className="p-4 md:p-5 rounded-xl border-2 bg-gradient-to-r from-orange-600 to-orange-700 border-orange-500 shadow-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🎁</span>
+                    <span className="text-lg md:text-xl font-bold text-white">活動獎金</span>
                   </div>
-                  <div className="text-xs text-gray-500 mt-1 text-right">
-                    (無條件捨去至百位)
-                  </div>
+                  <span className="text-2xl md:text-3xl font-black text-white">
+                    - NT$ {activityBonus.toLocaleString()}
+                  </span>
+                </div>
+                <div className="text-sm text-white/80 mt-1">
+                  從總獎金池額外抽出，不參與玩家分配
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            )}
 
-      {/* 計算規則說明 */}
-      <div className="bg-blue-600 bg-opacity-20 p-4 rounded-lg mb-4">
-        <h4 className="font-semibold mb-2">ICM 計算規則</h4>
-        <p className="text-sm text-gray-300 mb-2">
-          <strong>第一步：</strong>總獎金池 = (單組報名費 {entryFee.toLocaleString()} - 行政費 {deduction.toLocaleString()}) × 總組數 {totalGroups} = NT$ {totalPrizePool.toLocaleString()}
-        </p>
-        <p className="text-sm text-gray-300 mb-2">
-          <strong>第二步：</strong>淨獎池 = 總獎金池 {totalPrizePool.toLocaleString()} - 單場總提撥 {totalDeduction.toLocaleString()} = NT$ {remainingPrizePool.toLocaleString()}
-        </p>
-        <p className="text-sm text-gray-300 mb-2">
-          <strong>第三步：</strong>提撥分配 = 將提撥金 {totalDeduction.toLocaleString()} 按 {topThreeSplit[0]}% / {topThreeSplit[1]}% / {topThreeSplit[2]}% 分配給前三名
-        </p>
-        <p className="text-sm text-gray-300 mb-2">
-          <strong>第四步：</strong>最終獎金 = (個人籌碼 / 總發行籌碼) × 淨獎池 + (前三名提撥獎金)
-        </p>
-        <p className="text-sm text-gray-300">
-          <strong>第五步：</strong>所有獎金無條件捨去至百位數
-        </p>
-      </div>
+            {/* 第二步：淨獎池 */}
+            <div className="p-4 md:p-5 rounded-xl border-2 bg-gradient-to-r from-blue-600 to-blue-700 border-blue-500 shadow-lg">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">2️⃣</span>
+                  <span className="text-lg md:text-xl font-bold text-white">淨獎池</span>
+                </div>
+                <span className="text-2xl md:text-3xl font-black text-white">
+                  NT$ {(totalPrizePool - activityBonus).toLocaleString()}
+                </span>
+              </div>
+              <div className="text-sm md:text-base text-white/90 mt-2 bg-black/20 rounded-lg px-3 py-2">
+                總獎金池 {totalPrizePool.toLocaleString()}
+                {activityBonus > 0 && ` - 活動獎金 ${activityBonus.toLocaleString()}`}
+                {activityBonus === 0 && ' (無活動獎金)'}
+              </div>
+            </div>
 
-      {/* 統計 */}
-      <div className="bg-gray-700 p-4 rounded-lg">
-        <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-600">
-          <span className="font-semibold">已分配總額</span>
-          <span className="text-xl font-bold">NT$ {totalDistributed.toLocaleString()}</span>
-        </div>
-        <div className="flex justify-between items-center mt-2">
-          <span className="font-semibold">總獎池</span>
-          <span className="text-xl font-bold">NT$ {totalPrizePool.toLocaleString()}</span>
-        </div>
-        {Math.abs(remainder) < 0.01 ? (
-          <div className="text-green-400 text-sm mt-2">
-            ✓ 分配金額與總獎池完全一致
+            {/* 提撥獎金扣除（如果有） */}
+            {totalDeduction > 0 && (
+              <div className="p-4 md:p-5 rounded-xl border-2 bg-gradient-to-r from-purple-600 to-purple-700 border-purple-500 shadow-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">3️⃣</span>
+                    <span className="text-lg md:text-xl font-bold text-white">提撥獎金</span>
+                  </div>
+                  <span className="text-2xl md:text-3xl font-black text-white">
+                    - NT$ {totalDeduction.toLocaleString()}
+                  </span>
+                </div>
+                <div className="text-sm text-white/80 mt-1">
+                  從淨獎池扣除，按 {topThreeSplit[0]}% / {topThreeSplit[1]}% / {topThreeSplit[2]}% 分配給前三名
+                </div>
+              </div>
+            )}
+
+            {/* 最終分配獎池 */}
+            <div className="p-4 md:p-5 rounded-xl border-2 bg-gradient-to-r from-green-600 to-green-700 border-green-500 shadow-lg">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">4️⃣</span>
+                  <span className="text-lg md:text-xl font-bold text-white">最終分配獎池</span>
+                </div>
+                <span className="text-2xl md:text-3xl font-black text-white">
+                  NT$ {remainingPrizePool.toLocaleString()}
+                </span>
+              </div>
+              <div className="text-sm md:text-base text-white/90 mt-2 bg-black/20 rounded-lg px-3 py-2">
+                淨獎池 {(totalPrizePool - activityBonus).toLocaleString()}
+                {totalDeduction > 0 && ` - 提撥獎金 ${totalDeduction.toLocaleString()}`}
+                {totalDeduction === 0 && ' (無提撥獎金)'}
+              </div>
+            </div>
           </div>
-        ) : (
-          <div className="text-yellow-400 text-sm mt-2">
-            ⚠️ 計算誤差: NT$ {remainder.toFixed(2)} (因浮點數精度)
+
+          {/* 前三名提撥獎金顯示 */}
+          {topThreePrizes.length > 0 && (
+            <div className="bg-gray-800 rounded-xl p-4 md:p-5 border border-gray-700">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">5️⃣</span>
+                  <h3 className="text-lg md:text-xl font-bold text-poker-gold-300">前三名提撥獎金分配</h3>
+                </div>
+                <div className="text-sm text-gray-400 bg-gray-700 px-3 py-1 rounded-lg">
+                  總提撥：NT$ {totalDeduction.toLocaleString()}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {topThreePrizes.map((prize) => (
+                  <div 
+                    key={prize.rank} 
+                    className="bg-gradient-to-br from-yellow-600/20 to-yellow-700/20 border-2 border-yellow-500/40 rounded-xl p-4 hover:border-yellow-500/60 transition-all"
+                  >
+                    <div className="text-center mb-3">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-white font-black text-lg mb-2">
+                        {prize.rank}
+                      </div>
+                      <div className="text-sm text-gray-400">第 {prize.rank} 名</div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="bg-gray-700 rounded-lg p-2 text-center">
+                        <div className="text-xs text-gray-400 mb-1">獲得比例</div>
+                        <div className="text-lg font-bold text-yellow-400">
+                          {prize.percentage}%
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          ({totalDeduction.toLocaleString()} × {prize.percentage}% = {(totalDeduction * prize.percentage / 100).toLocaleString()})
+                        </div>
+                      </div>
+                      <div className="bg-gray-700 rounded-lg p-2 text-center">
+                        <div className="text-xs text-gray-400 mb-1">提撥獎金</div>
+                        <div className="text-xl font-black text-poker-gold-400">
+                          NT$ {prize.amount.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* 顯示總和驗證 */}
+              <div className="mt-4 pt-4 border-t border-gray-600 bg-gray-700/50 rounded-lg p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-300 font-medium">前三名提撥總額：</span>
+                  <span className="text-lg font-black text-poker-gold-400">
+                    NT$ {topThreePrizes.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-300 font-medium">設定的總提撥額：</span>
+                  <span className="text-lg font-black text-white">
+                    NT$ {totalDeduction.toLocaleString()}
+                  </span>
+                </div>
+                {Math.abs(topThreePrizes.reduce((sum, p) => sum + p.amount, 0) - totalDeduction) < 0.01 ? (
+                  <div className="flex items-center gap-2 text-sm text-green-400 font-semibold mt-2 pt-2 border-t border-gray-600">
+                    <span>✓</span>
+                    <span>分配總額等於設定的總提撥額</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-orange-400 font-semibold mt-2 pt-2 border-t border-gray-600">
+                    <span>⚠️</span>
+                    <span>分配總額與總提撥有差異：NT$ {Math.abs(topThreePrizes.reduce((sum, p) => sum + p.amount, 0) - totalDeduction).toFixed(2)}（已自動調整）</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 計算規則說明 */}
+          <div className="bg-gradient-to-br from-blue-900/40 to-blue-800/40 rounded-xl p-4 md:p-5 border border-blue-600/40">
+            <h4 className="font-bold text-lg mb-3 flex items-center gap-2 text-blue-300">
+              <span>📋</span>
+              <span>ICM 計算規則</span>
+            </h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-start gap-2">
+                <span className="font-bold text-blue-400 min-w-[60px]">第一步：</span>
+                <span className="text-gray-300">
+                  總獎金池 = (單組報名費 {entryFee.toLocaleString()} - 行政費 {deduction.toLocaleString()}) × 總組數 {totalGroups} = <strong className="text-green-400">NT$ {totalPrizePool.toLocaleString()}</strong>
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-bold text-blue-400 min-w-[60px]">第二步：</span>
+                <span className="text-gray-300">
+                  淨獎池 = 總獎金池 {totalPrizePool.toLocaleString()}
+                  {activityBonus > 0 && ` - 活動獎金 ${activityBonus.toLocaleString()}`}
+                  {activityBonus === 0 && ' (無活動獎金)'}
+                  {' = '}
+                  <strong className="text-blue-400">NT$ {(totalPrizePool - activityBonus).toLocaleString()}</strong>
+                </span>
+              </div>
+              {totalDeduction > 0 && (
+                <div className="flex items-start gap-2">
+                  <span className="font-bold text-blue-400 min-w-[60px]">第三步：</span>
+                  <span className="text-gray-300">
+                    提撥獎金 = <strong className="text-purple-400">NT$ {totalDeduction.toLocaleString()}</strong>（從淨獎池扣除）
+                  </span>
+                </div>
+              )}
+              {topThreePrizes.length > 0 && (
+                <div className="flex items-start gap-2">
+                  <span className="font-bold text-blue-400 min-w-[60px]">第四步：</span>
+                  <span className="text-gray-300">
+                    提撥分配 = 將提撥金 {totalDeduction.toLocaleString()} 按 <strong className="text-yellow-400">{topThreeSplit[0]}% / {topThreeSplit[1]}% / {topThreeSplit[2]}%</strong> 分配給前三名
+                  </span>
+                </div>
+              )}
+              <div className="flex items-start gap-2">
+                <span className="font-bold text-blue-400 min-w-[60px]">第五步：</span>
+                <span className="text-gray-300">
+                  最終分配獎池 = 淨獎池 {(totalPrizePool - activityBonus).toLocaleString()}
+                  {totalDeduction > 0 && ` - 提撥獎金 ${totalDeduction.toLocaleString()}`}
+                  {' = '}
+                  <strong className="text-green-400">NT$ {remainingPrizePool.toLocaleString()}</strong>
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-bold text-blue-400 min-w-[60px]">第六步：</span>
+                <span className="text-gray-300">
+                  最終獎金 = (個人籌碼 / 總發行籌碼) × 最終分配獎池 + (前三名提撥獎金)
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-bold text-blue-400 min-w-[60px]">第七步：</span>
+                <span className="text-gray-300">
+                  所有獎金無條件捨去至百位數
+                </span>
+              </div>
+            </div>
           </div>
-        )}
-        {Math.abs(adjustmentAmount) >= 0.01 && (
-          <div className="text-blue-400 text-sm mt-1">
-            💡 四捨五入差額已自動調整到第一名: NT$ {adjustmentAmount > 0 ? '+' : ''}{adjustmentAmount.toLocaleString()}
-          </div>
-        )}
-        <div className="text-purple-400 text-sm mt-2">
-          📊 共 {playerPrizes.length} 位玩家，淨獎池按籌碼占比分配給所有玩家
-        </div>
-        {topThreePrizes.length > 0 && (
-          <div className="text-yellow-400 text-sm mt-1">
-            🏆 前三名額外獲得提撥獎金（按獲得比例：{topThreeSplit[0]}% / {topThreeSplit[1]}% / {topThreeSplit[2]}%）
-          </div>
-        )}
+
+          {/* 統計資訊 */}
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-4 md:p-5 border-2 border-poker-gold-600/40 shadow-lg">
+            <h4 className="font-bold text-lg mb-4 flex items-center gap-2 text-poker-gold-300">
+              <span>📊</span>
+              <span>分配統計</span>
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div className="bg-gray-700 rounded-lg p-3 border border-gray-600">
+                <div className="text-sm text-gray-400 mb-1">已分配總額</div>
+                <div className="text-2xl font-black text-green-400">
+                  NT$ {totalDistributed.toLocaleString()}
+                </div>
+              </div>
+              <div className="bg-gray-700 rounded-lg p-3 border border-gray-600">
+                <div className="text-sm text-gray-400 mb-1">總獎池</div>
+                <div className="text-2xl font-black text-poker-gold-400">
+                  NT$ {totalPrizePool.toLocaleString()}
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2 pt-4 border-t border-gray-600">
+              {Math.abs(remainder) < 0.01 ? (
+                <div className="flex items-center gap-2 text-green-400 text-sm font-semibold bg-green-900/20 rounded-lg px-3 py-2">
+                  <span>✓</span>
+                  <span>分配金額與總獎池完全一致</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-yellow-400 text-sm font-semibold bg-yellow-900/20 rounded-lg px-3 py-2">
+                  <span>⚠️</span>
+                  <span>計算誤差: NT$ {remainder.toFixed(2)} (因浮點數精度)</span>
+                </div>
+              )}
+              {Math.abs(adjustmentAmount) >= 0.01 && (
+                <div className="flex items-center gap-2 text-blue-400 text-sm font-semibold bg-blue-900/20 rounded-lg px-3 py-2">
+                  <span>💡</span>
+                  <span>四捨五入差額已自動調整到第一名: NT$ {adjustmentAmount > 0 ? '+' : ''}{adjustmentAmount.toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-purple-400 text-sm font-semibold bg-purple-900/20 rounded-lg px-3 py-2">
+                <span>📊</span>
+                <span>共 {playerPrizes.length} 位玩家，淨獎池按籌碼占比分配給所有玩家</span>
+              </div>
+              {topThreePrizes.length > 0 && (
+                <div className="flex items-center gap-2 text-yellow-400 text-sm font-semibold bg-yellow-900/20 rounded-lg px-3 py-2">
+                  <span>🏆</span>
+                  <span>前三名額外獲得提撥獎金（按獲得比例：{topThreeSplit[0]}% / {topThreeSplit[1]}% / {topThreeSplit[2]}%）</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

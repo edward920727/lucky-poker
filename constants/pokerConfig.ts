@@ -17,6 +17,8 @@ export interface Player {
   buyInCount: number; // 買入次數
   currentChips: number; // 當前碼量
   paymentMethod: PaymentMethod; // 支付方式
+  couponCode?: string; // 折扣券代碼（選填）
+  couponDiscount?: number; // 折扣金額（選填，NT$）
   history?: PlayerHistory[]; // 歷史紀錄
 }
 

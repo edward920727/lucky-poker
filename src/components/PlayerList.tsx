@@ -85,17 +85,48 @@ export default function PlayerList({
           >
             <div className="flex justify-between items-start mb-3">
               <div className="font-mono font-bold text-xl text-poker-gold-300">{player.memberId}</div>
-              <select
-                value={player.paymentMethod}
-                onChange={(e) => onUpdatePlayer(player.id, { paymentMethod: e.target.value as PaymentMethod })}
-                className={`px-3 py-1.5 rounded-lg text-sm font-semibold text-white ${paymentMethodColors[player.paymentMethod]}`}
-              >
-                {(['cash', 'transfer', 'unpaid'] as PaymentMethod[]).map((method) => (
-                  <option key={method} value={method} className="bg-gray-800">
-                    {paymentMethodLabels[method]}
-                  </option>
-                ))}
-              </select>
+              <div className="flex flex-col gap-2 items-end">
+                <select
+                  value={player.paymentMethod}
+                  onChange={(e) => onUpdatePlayer(player.id, { paymentMethod: e.target.value as PaymentMethod })}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold text-white ${paymentMethodColors[player.paymentMethod]}`}
+                >
+                  {(['cash', 'transfer', 'unpaid'] as PaymentMethod[]).map((method) => (
+                    <option key={method} value={method} className="bg-gray-800">
+                      {paymentMethodLabels[method]}
+                    </option>
+                  ))}
+                </select>
+                {/* 折扣券輸入 */}
+                <div className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    placeholder="折扣券"
+                    value={player.couponCode || ''}
+                    onChange={(e) => onUpdatePlayer(player.id, { couponCode: e.target.value.trim() || undefined })}
+                    className="w-20 px-2 py-1 bg-gray-700 rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-poker-gold-500"
+                  />
+                  {player.couponCode && (
+                    <input
+                      type="number"
+                      placeholder="折扣"
+                      value={player.couponDiscount || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        const discount = value === '' ? undefined : Math.max(0, parseFloat(value) || 0);
+                        onUpdatePlayer(player.id, { couponDiscount: discount });
+                      }}
+                      className="w-16 px-2 py-1 bg-gray-700 rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-poker-gold-500"
+                      min="0"
+                    />
+                  )}
+                </div>
+                {player.couponCode && player.couponDiscount && (
+                  <div className="text-xs text-yellow-400">
+                    🎫 -NT$ {player.couponDiscount.toLocaleString()}
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="space-y-3">
@@ -196,17 +227,48 @@ export default function PlayerList({
                   </div>
                 </td>
                 <td className="py-4 px-4">
-                  <select
-                    value={player.paymentMethod}
-                    onChange={(e) => onUpdatePlayer(player.id, { paymentMethod: e.target.value as PaymentMethod })}
-                    className={`px-3 py-1 rounded text-sm font-semibold text-white ${paymentMethodColors[player.paymentMethod]}`}
-                  >
-                    {(['cash', 'transfer', 'unpaid'] as PaymentMethod[]).map((method) => (
-                      <option key={method} value={method} className="bg-gray-800">
-                        {paymentMethodLabels[method]}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex flex-col gap-2">
+                    <select
+                      value={player.paymentMethod}
+                      onChange={(e) => onUpdatePlayer(player.id, { paymentMethod: e.target.value as PaymentMethod })}
+                      className={`px-3 py-1 rounded text-sm font-semibold text-white ${paymentMethodColors[player.paymentMethod]}`}
+                    >
+                      {(['cash', 'transfer', 'unpaid'] as PaymentMethod[]).map((method) => (
+                        <option key={method} value={method} className="bg-gray-800">
+                          {paymentMethodLabels[method]}
+                        </option>
+                      ))}
+                    </select>
+                    {/* 折扣券輸入 */}
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        placeholder="折扣券代碼"
+                        value={player.couponCode || ''}
+                        onChange={(e) => onUpdatePlayer(player.id, { couponCode: e.target.value.trim() || undefined })}
+                        className="flex-1 px-2 py-1 bg-gray-700 rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-poker-gold-500"
+                      />
+                      {player.couponCode && (
+                        <input
+                          type="number"
+                          placeholder="折扣金額"
+                          value={player.couponDiscount || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            const discount = value === '' ? undefined : Math.max(0, parseFloat(value) || 0);
+                            onUpdatePlayer(player.id, { couponDiscount: discount });
+                          }}
+                          className="w-20 px-2 py-1 bg-gray-700 rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-poker-gold-500"
+                          min="0"
+                        />
+                      )}
+                    </div>
+                    {player.couponCode && player.couponDiscount && (
+                      <div className="text-xs text-yellow-400">
+                        🎫 {player.couponCode}: -NT$ {player.couponDiscount.toLocaleString()}
+                      </div>
+                    )}
+                  </div>
                 </td>
                 <td className="py-4 px-4">
                   <button

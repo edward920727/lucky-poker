@@ -21,6 +21,7 @@ export interface ICMRewardStructure {
   prizePerGroup: number;          // 獎金池單價（每組）
   totalDeduction: number;         // 單次總提撥（整場固定一次，不是每組）
   topThreeSplit: [number, number, number]; // 前三名提撥獎金獲得比例 [第一名%, 第二名%, 第三名%]
+  activityBonus?: number;         // 預設活動獎金（選填，從總獎金池額外抽出，不分配給玩家）
 }
 
 export const ICM_REWARD_STRUCTURE: Record<number, ICMRewardStructure> = {

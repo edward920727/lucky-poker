@@ -89,6 +89,7 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
               <th className="border border-gray-700 py-3 px-4 text-left">會編</th>
               <th className="border border-gray-700 py-3 px-4 text-left">買入次數</th>
               <th className="border border-gray-700 py-3 px-4 text-left">支付方式</th>
+              <th className="border border-gray-700 py-3 px-4 text-left">折扣券</th>
               <th className="border border-gray-700 py-3 px-4 text-left">當前碼量</th>
               <th className="border border-gray-700 py-3 px-4 text-right">獎金金額</th>
             </tr>
@@ -131,6 +132,16 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
                       {paymentMethodLabels[player.paymentMethod]}
                     </span>
                   </td>
+                  <td className="border border-gray-700 py-3 px-4">
+                    {player.couponCode && player.couponDiscount ? (
+                      <div className="text-xs">
+                        <div className="text-yellow-400 font-semibold">{player.couponCode}</div>
+                        <div className="text-yellow-300">-NT$ {player.couponDiscount.toLocaleString()}</div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-500">-</span>
+                    )}
+                  </td>
                   <td className="border border-gray-700 py-3 px-4">{player.currentChips.toLocaleString()}</td>
                   <td className="border border-gray-700 py-3 px-4 text-right font-semibold text-green-400">
                     {displayPrize !== null ? `NT$ ${displayPrize.toLocaleString()}` : '-'}
@@ -146,44 +157,79 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
           <div className="mt-6">
             <h2 className="text-2xl font-bold mb-4 text-center">獎金分配摘要</h2>
             <div className="bg-yellow-600 bg-opacity-20 p-4 rounded-lg mb-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-lg font-semibold">總獎池</span>
-                <span className="text-2xl font-bold">NT$ {prizeCalculation.totalPrizePool.toLocaleString()}</span>
+              <div className="grid grid-cols-2 gap-4 mb-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-semibold">總獎池</span>
+                  <span className="text-xl font-bold">NT$ {prizeCalculation.totalPrizePool.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-semibold text-green-400">淨獎池</span>
+                  <span className="text-xl font-bold text-green-400">
+                    NT$ {prizeCalculation.totalDistributed.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-green-600 bg-opacity-30 p-2 rounded mb-3 text-center">
+                <div className="text-sm opacity-90 mb-1">所有玩家獎金總和</div>
+                <div className="text-2xl font-bold text-green-300">
+                  NT$ {prizeCalculation.totalDistributed.toLocaleString()}
+                </div>
+                <div className="text-xs opacity-75 mt-1">
+                  ✓ 等於淨獎池（總獎池 - 活動獎金）
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm mt-3">
                 <div>
                   <span className="opacity-90">前三名提撥獎金:</span>
                   <span className="font-semibold ml-2">NT$ {prizeCalculation.topThreeTotal.toLocaleString()}</span>
+                  {prizeCalculation.topThreePrizes.length > 0 && (
+                    <div className="text-xs opacity-75 mt-1">
+                      {prizeCalculation.topThreePrizes.map((p, idx) => (
+                        <span key={p.rank}>
+                          {idx > 0 && ' / '}
+                          第{p.rank}名: NT$ {p.amount.toLocaleString()} ({p.percentage}%)
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
-                  <span className="opacity-90">剩餘獎池（按籌碼分配）:</span>
+                  <span className="opacity-90">最終分配獎池（按籌碼分配）:</span>
                   <span className="font-semibold ml-2">NT$ {prizeCalculation.remainingPrizePool.toLocaleString()}</span>
+                  <div className="text-xs opacity-75 mt-1">
+                    (淨獎池 - 提撥獎金)
+                  </div>
                 </div>
               </div>
-              <div className="text-sm opacity-90 mt-2">
-                總分配金額: NT$ {prizeCalculation.totalDistributed.toLocaleString()}
-                {Math.abs(prizeCalculation.adjustmentAmount) >= 0.01 && (
-                  <span className="ml-2">
-                    (差額 {prizeCalculation.adjustmentAmount > 0 ? '+' : ''}{prizeCalculation.adjustmentAmount.toLocaleString()} 已調整至第一名)
-                  </span>
-                )}
-              </div>
+              {Math.abs(prizeCalculation.adjustmentAmount) >= 0.01 && (
+                <div className="text-xs opacity-75 mt-2 pt-2 border-t border-yellow-500 border-opacity-30">
+                  差額調整: {prizeCalculation.adjustmentAmount > 0 ? '+' : ''}{prizeCalculation.adjustmentAmount.toLocaleString()} 已調整至第一名（處理捨去誤差）
+                </div>
+              )}
             </div>
             <div className="bg-blue-600 bg-opacity-20 p-3 rounded-lg mb-4">
               <p className="text-sm mb-2">
-                <strong>分配規則：</strong>
+                <strong>ICM 分配規則：</strong>
               </p>
               <p className="text-sm mb-1">
-                1. 從總獎池中提撥前三名獎金（按設定百分比）
+                1. 總獎金池 = (單組報名費 - 行政費) × 總組數
               </p>
               <p className="text-sm mb-1">
-                2. 剩餘獎池按籌碼占比分配給所有玩家（包括前三名）
+                2. 淨獎池 = 總獎金池 - 活動獎金
               </p>
-              <p className="text-sm">
-                3. 前三名最終獎金 = 按籌碼占比分配的部分 + 提撥獎金
+              <p className="text-sm mb-1">
+                3. 提撥獎金從淨獎池扣除，按設定比例分配給前三名
+              </p>
+              <p className="text-sm mb-1">
+                4. 最終分配獎池 = 淨獎池 - 提撥獎金
+              </p>
+              <p className="text-sm mb-1">
+                5. 最終獎金 = (個人籌碼 / 總發行籌碼) × 最終分配獎池 + (前三名提撥獎金)
               </p>
               <p className="text-xs text-gray-300 mt-2">
-                • 所有獎金均四捨五入至百位數
+                • 提撥獎金分配總額等於設定的總提撥額（無捨去）
+                <br />
+                • 最終獎金無條件捨去至百位數
               </p>
             </div>
           </div>

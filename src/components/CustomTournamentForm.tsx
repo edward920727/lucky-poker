@@ -12,6 +12,7 @@ export default function CustomTournamentForm({ onSubmit, onCancel }: CustomTourn
   const [entryFee, setEntryFee] = useState('');
   const [administrativeFee, setAdministrativeFee] = useState('');
   const [totalDeduction, setTotalDeduction] = useState('');
+  const [activityBonus, setActivityBonus] = useState('');
   const [topThreeSplitFirst, setTopThreeSplitFirst] = useState('50');
   const [topThreeSplitSecond, setTopThreeSplitSecond] = useState('30');
   const [topThreeSplitThird, setTopThreeSplitThird] = useState('20');
@@ -20,10 +21,12 @@ export default function CustomTournamentForm({ onSubmit, onCancel }: CustomTourn
     administrativeFee: boolean;
     totalDeduction: boolean;
     topThreeSplit: boolean;
+    activityBonus: boolean;
   }>({
     administrativeFee: false,
     totalDeduction: false,
     topThreeSplit: false,
+    activityBonus: false,
   });
 
   // 當報名費變化時，自動帶入ICM結構的值
@@ -37,6 +40,9 @@ export default function CustomTournamentForm({ onSubmit, onCancel }: CustomTourn
         }
         if (!isManualEdit.totalDeduction) {
           setTotalDeduction(icmStructure.totalDeduction.toString());
+        }
+        if (!isManualEdit.activityBonus && icmStructure.activityBonus !== undefined) {
+          setActivityBonus(icmStructure.activityBonus.toString());
         }
         if (!isManualEdit.topThreeSplit) {
           setTopThreeSplitFirst(icmStructure.topThreeSplit[0].toString());
@@ -53,6 +59,7 @@ export default function CustomTournamentForm({ onSubmit, onCancel }: CustomTourn
     const entryFeeNum = parseInt(entryFee);
     const administrativeFeeNum = parseInt(administrativeFee);
     const totalDeductionNum = totalDeduction ? parseInt(totalDeduction) : undefined;
+    const activityBonusNum = activityBonus ? parseInt(activityBonus) : undefined;
     const startChipNum = parseInt(startChip);
 
     if (!name.trim()) {
@@ -75,6 +82,11 @@ export default function CustomTournamentForm({ onSubmit, onCancel }: CustomTourn
       return;
     }
 
+    if (activityBonus && (isNaN(activityBonusNum!) || activityBonusNum! < 0)) {
+      alert('請輸入有效的活動獎金金額');
+      return;
+    }
+
     if (isNaN(startChipNum) || startChipNum <= 0) {
       alert('請輸入有效的起始籌碼');
       return;
@@ -91,6 +103,7 @@ export default function CustomTournamentForm({ onSubmit, onCancel }: CustomTourn
       startChip: startChipNum,
       totalDeduction: totalDeductionNum,
       topThreeSplit: [topThreeSplitFirstNum, topThreeSplitSecondNum, topThreeSplitThirdNum],
+      activityBonus: activityBonusNum,
     });
   };
 
@@ -139,6 +152,49 @@ export default function CustomTournamentForm({ onSubmit, onCancel }: CustomTourn
               placeholder="例如：春季錦標賽"
               required
             />
+          </div>
+
+          <div>
+            <label htmlFor="activityBonus" className="block text-sm font-semibold text-gray-700 mb-2">
+              活動獎金 (NT$)
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                id="activityBonus"
+                type="number"
+                value={activityBonus}
+                onChange={(e) => {
+                  setActivityBonus(e.target.value);
+                  setIsManualEdit(prev => ({ ...prev, activityBonus: true }));
+                }}
+                className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-poker-gold-500 focus:outline-none text-black text-lg"
+                placeholder="例如：1000"
+                min="0"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const entryFeeNum = parseInt(entryFee);
+                  if (!isNaN(entryFeeNum)) {
+                    const icmStructure = getICMRewardStructure(entryFeeNum);
+                    if (icmStructure && icmStructure.activityBonus !== undefined) {
+                      setActivityBonus(icmStructure.activityBonus.toString());
+                      setIsManualEdit(prev => ({ ...prev, activityBonus: false }));
+                    } else {
+                      setActivityBonus('');
+                      setIsManualEdit(prev => ({ ...prev, activityBonus: false }));
+                    }
+                  }
+                }}
+                className="px-3 py-3 bg-gray-200 hover:bg-gray-300 rounded-xl text-sm font-semibold text-black transition-all"
+                title="恢復自動值"
+              >
+                🔄
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              從總獎金池額外抽出的活動獎金，不參與玩家獎金分配（預設為 0，可手動設定）
+            </p>
           </div>
 
           <div>

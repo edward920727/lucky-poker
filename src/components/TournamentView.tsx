@@ -36,7 +36,12 @@ function PaymentMethodStats({ players, entryFee }: PaymentMethodStatsProps) {
   const calculateByPaymentMethod = (method: PaymentMethod) => {
     return players
       .filter(p => p.paymentMethod === method)
-      .reduce((sum, p) => sum + (p.buyInCount * entryFee), 0);
+      .reduce((sum, p) => {
+        // 計算該玩家的實際支付金額 = (買入次數 × 報名費) - 折扣券折扣
+        const totalAmount = p.buyInCount * entryFee;
+        const discount = p.couponDiscount || 0;
+        return sum + (totalAmount - discount);
+      }, 0);
   };
 
   const cashTotal = calculateByPaymentMethod('cash');
@@ -83,7 +88,7 @@ function PaymentMethodStats({ players, entryFee }: PaymentMethodStatsProps) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="bg-gray-700 p-3 rounded-xl border border-gray-600">
-              <p className="text-sm text-gray-300 mb-1 font-semibold">應收總額</p>
+              <p className="text-sm text-gray-300 mb-1 font-semibold">應收總額（已扣除折扣券）</p>
               <p className="text-xl font-black text-white">NT$ {totalExpected.toLocaleString()}</p>
             </div>
             <div className={`p-3 rounded-xl border-2 border-opacity-50 ${totalReceived === totalExpected ? 'bg-gradient-to-br from-green-600 to-green-800 border-green-500' : 'bg-gradient-to-br from-yellow-600 to-yellow-800 border-yellow-500'}`}>
@@ -91,6 +96,14 @@ function PaymentMethodStats({ players, entryFee }: PaymentMethodStatsProps) {
               <p className="text-xl font-black text-white">NT$ {totalReceived.toLocaleString()}</p>
             </div>
           </div>
+          {players.some(p => p.couponCode && p.couponDiscount) && (
+            <div className="bg-yellow-900 bg-opacity-30 p-3 rounded-xl border border-yellow-600 border-opacity-50">
+              <p className="text-sm text-yellow-300 mb-1 font-semibold">🎫 折扣券總折扣</p>
+              <p className="text-xl font-black text-yellow-400">
+                -NT$ {players.reduce((sum, p) => sum + (p.couponDiscount || 0), 0).toLocaleString()}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -109,6 +122,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
   const [newMemberId, setNewMemberId] = useState('');
   const [showKeyboard, setShowKeyboard] = useState(false);
   const [editedTotalDeduction, setEditedTotalDeduction] = useState<string>('');
+  const [editedActivityBonus, setEditedActivityBonus] = useState<string>('');
 
   useEffect(() => {
     const record = getTournamentById(tournamentId);
@@ -122,6 +136,15 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
         setEditedTotalDeduction(record.totalDeduction.toString());
       } else {
         setEditedTotalDeduction('');
+      }
+
+      // 初始化活動獎金編輯值
+      if (record.customConfig?.activityBonus !== undefined) {
+        setEditedActivityBonus(record.customConfig.activityBonus.toString());
+      } else if (record.activityBonus !== undefined) {
+        setEditedActivityBonus(record.activityBonus.toString());
+      } else {
+        setEditedActivityBonus('');
       }
     }
   }, [tournamentId]);
@@ -170,6 +193,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
               administrativeFee: customConfig.administrativeFee,
               totalGroups,
               totalDeduction: customConfig.totalDeduction,
+              activityBonus: customConfig.activityBonus || 0,
               topThreeSplit: customConfig.topThreeSplit,
             },
             displayPlayers
@@ -193,6 +217,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
               administrativeFee,
               totalGroups,
               totalDeduction: icmStructure.totalDeduction,
+              activityBonus: tournament.activityBonus || icmStructure.activityBonus || 0,
               topThreeSplit: icmStructure.topThreeSplit,
             },
             displayPlayers
@@ -212,6 +237,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
 
     // 計算新的提撥金和獎池
     const totalDeductionNum = editedTotalDeduction ? parseInt(editedTotalDeduction) : 0;
+    const activityBonusNum = editedActivityBonus ? parseInt(editedActivityBonus) : 0;
     const totalBuyInGroups = editedPlayers.reduce((sum, p) => sum + p.buyInCount, 0);
     // 單次總提撥是整場固定一次，不是每組的
     const totalDeduction = totalDeductionNum;
@@ -229,8 +255,9 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
     const totalAdministrativeFee = administrativeFeePerPerson * totalBuyInGroups;
     
     // 第一步：總獎金池 = (單組報名費 - 行政費) × 總組數
-    // 第二步：淨獎池 = 總獎金池 - 單場總提撥金
-    const totalPrizePool = (entryFee - administrativeFeePerPerson) * totalBuyInGroups - totalDeduction;
+    const rawTotalPrizePool = (entryFee - administrativeFeePerPerson) * totalBuyInGroups;
+    // 第二步：淨獎池 = 總獎金池 - 活動獎金 - 單場總提撥金
+    const totalPrizePool = rawTotalPrizePool - activityBonusNum - totalDeduction;
 
     // 構建更新對象，只包含有效的字段
     const updatedTournament: TournamentRecord = {
@@ -240,10 +267,12 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
       totalBuyIn,
       totalAdministrativeFee,
       totalPrizePool,
+      activityBonus: activityBonusNum > 0 ? activityBonusNum : undefined,
       // 如果是自定義賽事，更新 customConfig 中的提撥金
       customConfig: tournament.customConfig ? {
         ...tournament.customConfig,
         ...(totalDeduction > 0 ? { totalDeduction } : {}),
+        ...(activityBonusNum > 0 ? { activityBonus: activityBonusNum } : {}),
       } : undefined,
     };
     
@@ -271,6 +300,15 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
         setEditedTotalDeduction(tournament.totalDeduction.toString());
       } else {
         setEditedTotalDeduction('');
+      }
+
+      // 重置活動獎金編輯值
+      if (tournament.customConfig?.activityBonus !== undefined) {
+        setEditedActivityBonus(tournament.customConfig.activityBonus.toString());
+      } else if (tournament.activityBonus !== undefined) {
+        setEditedActivityBonus(tournament.activityBonus.toString());
+      } else {
+        setEditedActivityBonus('');
       }
     }
     setIsEditMode(false);
@@ -522,6 +560,22 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                     當前組數：{editedPlayers.reduce((sum, p) => sum + p.buyInCount, 0)} 組
                   </p>
                 </div>
+                <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                  <label className="block text-sm text-gray-400 mb-2">
+                    活動獎金 (NT$)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editedActivityBonus}
+                    onChange={(e) => setEditedActivityBonus(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-700 border-2 border-poker-gold-600 rounded-xl text-white text-lg focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
+                    placeholder="輸入活動獎金"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    從總獎金池額外抽出的活動獎金，不參與玩家獎金分配
+                  </p>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
                     <p className="text-sm text-gray-400 mb-2">總收入</p>
@@ -560,6 +614,17 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                       </p>
                     </div>
                   )}
+                  {editedActivityBonus && parseInt(editedActivityBonus) > 0 && (
+                    <div className="bg-purple-900 bg-opacity-50 rounded-xl p-4 border border-purple-700">
+                      <p className="text-sm text-gray-400 mb-2">活動獎金</p>
+                      <p className="text-2xl font-bold text-purple-300">
+                        NT$ {parseInt(editedActivityBonus).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        從總獎金池額外抽出，不參與玩家獎金分配
+                      </p>
+                    </div>
+                  )}
                   <div className="bg-poker-gold-900 bg-opacity-50 rounded-xl p-4 border border-poker-gold-700">
                     <p className="text-sm text-gray-400 mb-2">總獎池（預覽）</p>
                     <p className="text-2xl font-bold text-poker-gold-300">
@@ -572,16 +637,15 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                         const totalGroups = editedPlayers.reduce((sum, p) => sum + p.buyInCount, 0);
                         // 第一步：總獎金池 = (單組報名費 - 行政費) × 總組數
                         const totalPrizePool = (entryFee - administrativeFee) * totalGroups;
-                        // 第二步：淨獎池 = 總獎金池 - 單場總提撥金
+                        // 第二步：淨獎池 = 總獎金池 - 活動獎金 - 單場總提撥金
                         const totalDeduction = parseInt(editedTotalDeduction) || 0;
-                        const netPool = totalPrizePool - totalDeduction;
+                        const activityBonus = parseInt(editedActivityBonus) || 0;
+                        const netPool = totalPrizePool - activityBonus - totalDeduction;
                         return netPool.toLocaleString();
                       })()}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {tournament.customConfig?.prizePerGroup
-                        ? `單組獎金 × 組數`
-                        : `總收入 - 總行政費 - 總提撥金`}
+                      總獎金池 - 活動獎金 - 單場總提撥金
                     </p>
                   </div>
                 </div>
@@ -616,19 +680,21 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                     </p>
                   </div>
                 )}
+                {tournament.activityBonus !== undefined && tournament.activityBonus > 0 && (
+                  <div className="bg-purple-900 bg-opacity-50 rounded-xl p-4 border border-purple-700">
+                    <p className="text-sm text-gray-400 mb-2">活動獎金</p>
+                    <p className="text-2xl font-bold text-purple-300">
+                      NT$ {tournament.activityBonus.toLocaleString()}
+                    </p>
+                  </div>
+                )}
                 <div className="bg-poker-gold-900 bg-opacity-50 rounded-xl p-4 border border-poker-gold-700">
                   <p className="text-sm text-gray-400 mb-2">總獎池</p>
                   <p className="text-2xl font-bold text-poker-gold-300">
                     NT$ {(tournament.totalPrizePool || tournament.totalBuyIn).toLocaleString()}
                   </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {tournament.tournamentType === 'custom' && tournament.customConfig
-                        ? `(報名費 - 行政費) × 組數 - 單場總提撥`
-                        : tournament.totalAdministrativeFee !== undefined && tournament.totalAdministrativeFee > 0
-                        ? tournament.totalDeduction !== undefined && tournament.totalDeduction > 0
-                          ? `總收入 - 總行政費 - 單場總提撥`
-                          : `總收入 - 總行政費`
-                        : '總收入'}
+                      (報名費 - 行政費) × 組數 - 活動獎金 - 單場總提撥
                     </p>
                 </div>
               </div>
@@ -760,9 +826,16 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                       <td className="py-4 px-4">{player.buyInCount}</td>
                       <td className="py-4 px-4">{player.currentChips.toLocaleString()}</td>
                       <td className="py-4 px-4">
-                        <span className={`px-3 py-1 rounded-lg text-sm font-semibold text-white ${paymentMethodColors[player.paymentMethod]}`}>
-                          {paymentMethodLabels[player.paymentMethod]}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span className={`px-3 py-1 rounded-lg text-sm font-semibold text-white ${paymentMethodColors[player.paymentMethod]}`}>
+                            {paymentMethodLabels[player.paymentMethod]}
+                          </span>
+                          {player.couponCode && player.couponDiscount && (
+                            <span className="text-xs text-yellow-400">
+                              🎫 {player.couponCode}: -NT$ {player.couponDiscount.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

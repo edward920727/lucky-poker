@@ -17,13 +17,22 @@ export default function FinancialStats({ players, tournamentType, customConfig }
   const calculateByPaymentMethod = (method: PaymentMethod) => {
     return players
       .filter(p => p.paymentMethod === method)
-      .reduce((sum, p) => sum + (p.buyInCount * entryFee), 0);
+      .reduce((sum, p) => {
+        // 計算該玩家的實際支付金額 = (買入次數 × 報名費) - 折扣券折扣
+        const totalAmount = p.buyInCount * entryFee;
+        const discount = p.couponDiscount || 0;
+        return sum + (totalAmount - discount);
+      }, 0);
   };
 
   const cashTotal = calculateByPaymentMethod('cash');
   const transferTotal = calculateByPaymentMethod('transfer');
   const unpaidTotal = calculateByPaymentMethod('unpaid');
-  const totalExpected = players.reduce((sum, p) => sum + (p.buyInCount * entryFee), 0);
+  const totalExpected = players.reduce((sum, p) => {
+    const totalAmount = p.buyInCount * entryFee;
+    const discount = p.couponDiscount || 0;
+    return sum + (totalAmount - discount);
+  }, 0);
   const totalReceived = cashTotal + transferTotal;
 
   const unpaidPlayers = players.filter(p => p.paymentMethod === 'unpaid');
@@ -82,7 +91,7 @@ export default function FinancialStats({ players, tournamentType, customConfig }
         <div className="relative bg-gradient-to-br from-gray-700 to-gray-800 p-4 rounded-xl shadow-lg border-2 border-gray-600 overflow-hidden">
           <div className="absolute top-0 right-0 w-16 h-16 bg-white opacity-5 transform rotate-45 translate-x-8 -translate-y-8"></div>
           <div className="relative z-10">
-            <p className="text-sm text-gray-300 mb-1 font-semibold">應收總額</p>
+            <p className="text-sm text-gray-300 mb-1 font-semibold">應收總額（已扣除折扣券）</p>
             <p className="text-2xl font-black text-white">NT$ {totalExpected.toLocaleString()}</p>
           </div>
         </div>
@@ -95,6 +104,21 @@ export default function FinancialStats({ players, tournamentType, customConfig }
         </div>
       </div>
 
+      {/* 折扣券統計 */}
+      {players.some(p => p.couponCode && p.couponDiscount) && (
+        <div className="mb-6">
+          <div className="relative bg-gradient-to-br from-yellow-700 to-yellow-800 p-4 rounded-xl shadow-lg border-2 border-yellow-500 border-opacity-50 overflow-hidden">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-white opacity-5 transform rotate-45 translate-x-8 -translate-y-8"></div>
+            <div className="relative z-10">
+              <p className="text-sm text-yellow-200 mb-1 font-semibold">🎫 折扣券總折扣</p>
+              <p className="text-2xl font-black text-yellow-100">
+                -NT$ {players.reduce((sum, p) => sum + (p.couponDiscount || 0), 0).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 未付清列表 */}
       {unpaidPlayers.length > 0 && (
         <div className="bg-gradient-to-r from-red-900 via-red-800 to-red-900 bg-opacity-60 border-2 border-red-600 rounded-xl p-4 shadow-xl">
@@ -105,9 +129,16 @@ export default function FinancialStats({ players, tournamentType, customConfig }
           <div className="space-y-2">
             {unpaidPlayers.map((player) => (
               <div key={player.id} className="flex justify-between items-center bg-red-800 bg-opacity-70 p-3 rounded-lg border border-red-600 hover:bg-opacity-90 transition-colors">
-                <span className="font-mono font-bold text-red-200">會編 {player.memberId}</span>
+                <div className="flex flex-col">
+                  <span className="font-mono font-bold text-red-200">會編 {player.memberId}</span>
+                  {player.couponCode && player.couponDiscount && (
+                    <span className="text-xs text-yellow-300">
+                      🎫 {player.couponCode}: -NT$ {player.couponDiscount.toLocaleString()}
+                    </span>
+                  )}
+                </div>
                 <span className="text-red-100 font-semibold">
-                  應付: NT$ {(player.buyInCount * entryFee).toLocaleString()}
+                  應付: NT$ {((player.buyInCount * entryFee) - (player.couponDiscount || 0)).toLocaleString()}
                 </span>
               </div>
             ))}

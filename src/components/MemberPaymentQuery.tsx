@@ -39,7 +39,10 @@ export default function MemberPaymentQuery({ onClose }: MemberPaymentQueryProps)
         const entryFee = tournament.tournamentType === 'custom' && tournament.customConfig
           ? tournament.customConfig.entryFee
           : parseInt(tournament.tournamentType);
-        const totalAmount = player.buyInCount * entryFee;
+        // 計算實際應付金額（扣除折扣券）
+        const baseAmount = player.buyInCount * entryFee;
+        const discount = player.couponDiscount || 0;
+        const totalAmount = baseAmount - discount;
         const paymentStatus = player.paymentMethod === 'unpaid' ? 'unpaid' : 'paid';
 
         memberRecords.push({
@@ -210,17 +213,27 @@ export default function MemberPaymentQuery({ onClose }: MemberPaymentQueryProps)
                         </span>
                       </div>
                     </div>
-                    <div className="mt-2">
-                      <span className="text-gray-400 text-sm">支付方式：</span>
-                      <span className={`text-sm font-semibold ml-2 ${
-                        record.player.paymentMethod === 'cash' ? 'text-green-400' :
-                        record.player.paymentMethod === 'transfer' ? 'text-blue-400' :
-                        'text-red-400'
-                      }`}>
-                        {record.player.paymentMethod === 'cash' ? '💵 現金' :
-                         record.player.paymentMethod === 'transfer' ? '🏦 轉帳' :
-                         '⚠️ 未付'}
-                      </span>
+                    <div className="mt-2 space-y-1">
+                      <div>
+                        <span className="text-gray-400 text-sm">支付方式：</span>
+                        <span className={`text-sm font-semibold ml-2 ${
+                          record.player.paymentMethod === 'cash' ? 'text-green-400' :
+                          record.player.paymentMethod === 'transfer' ? 'text-blue-400' :
+                          'text-red-400'
+                        }`}>
+                          {record.player.paymentMethod === 'cash' ? '💵 現金' :
+                           record.player.paymentMethod === 'transfer' ? '🏦 轉帳' :
+                           '⚠️ 未付'}
+                        </span>
+                      </div>
+                      {record.player.couponCode && record.player.couponDiscount && (
+                        <div>
+                          <span className="text-gray-400 text-sm">折扣券：</span>
+                          <span className="text-sm font-semibold ml-2 text-yellow-400">
+                            🎫 {record.player.couponCode}: -NT$ {record.player.couponDiscount.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-2">
