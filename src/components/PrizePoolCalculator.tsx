@@ -666,7 +666,7 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
               {Math.abs(adjustmentAmount) >= 0.01 && (
                 <div className="flex items-center gap-2 text-blue-400 text-sm font-semibold bg-blue-900/20 rounded-lg px-3 py-2">
                   <span>💡</span>
-                  <span>四捨五入差額已自動調整到第一名: NT$ {adjustmentAmount > 0 ? '+' : ''}{adjustmentAmount.toLocaleString()}</span>
+                  <span>四捨五入差額已自動調整到捨去尾數最多的玩家: NT$ {adjustmentAmount > 0 ? '+' : ''}{adjustmentAmount.toLocaleString()}</span>
                 </div>
               )}
               <div className="flex items-center gap-2 text-purple-400 text-sm font-semibold bg-purple-900/20 rounded-lg px-3 py-2">

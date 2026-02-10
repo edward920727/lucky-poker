@@ -299,7 +299,7 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
               </div>
               {Math.abs(prizeCalculation.adjustmentAmount) >= 0.01 && (
                 <div className="text-xs opacity-75 mt-2 pt-2 border-t border-yellow-500 border-opacity-30">
-                  差額調整: {prizeCalculation.adjustmentAmount > 0 ? '+' : ''}{prizeCalculation.adjustmentAmount.toLocaleString()} 已調整至第一名（處理捨去誤差）
+                  差額調整: {prizeCalculation.adjustmentAmount > 0 ? '+' : ''}{prizeCalculation.adjustmentAmount.toLocaleString()} 已調整至捨去尾數最多的玩家（處理捨去誤差）
                 </div>
               )}
             </div>

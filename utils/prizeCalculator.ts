@@ -11,6 +11,7 @@ export interface PlayerPrize {
   chipBasedPrize: number; // 按筹码占比计算的奖金
   topThreeBonus: number; // 前三名提拨奖金（仅前三名有）
   prizeAmount: number; // 最终奖金 = chipBasedPrize + topThreeBonus
+  roundedLoss?: number; // 捨去的尾數（用於差額調整）
 }
 
 /**
@@ -93,7 +94,7 @@ export interface ICMCalculationParams {
  *    - 前三名提撥獎金：不捨去（精確值）
  *    - 最終獎金：無條件捨去至百位
  * 
- * 7️⃣ 差額調整：將捨去誤差加到第一名，確保所有玩家獎金總和 = 淨獎池
+ * 7️⃣ 差額調整：優先補齊捨去尾數最多的玩家，確保所有玩家獎金總和 = 淨獎池
  * 
  * 範例：6600報名費，15組，行政費600，活動獎金500，提撥獎金1000（50%/30%/20%）
  * - 1️⃣ 總獎金池 = (6600 - 600) × 15 = 90,000
@@ -106,7 +107,7 @@ export interface ICMCalculationParams {
  *   * 總和 = 500 + 300 + 200 = 1,000 ✓
  * - 5️⃣ 最終分配獎池 = 89,500 - 1,000 = 88,500
  * - 6️⃣ 最終獎金 = (個人籌碼 / 總發行籌碼) × 88,500 + (前三名提撥獎金)
- * - 7️⃣ 差額調整：將捨去誤差加到第一名
+ * - 7️⃣ 差額調整：優先補齊捨去尾數最多的玩家
  */
 export function calculateICMPrize(
   params: ICMCalculationParams,
@@ -253,6 +254,7 @@ export function calculateICMPrize(
         chipBasedPrize: 0,
         topThreeBonus: 0,
         prizeAmount: 0,
+        roundedLoss: 0,
       });
       continue;
     }
@@ -274,6 +276,7 @@ export function calculateICMPrize(
     const finalPrize = chipBasedRounded + topThreeBonus;
     // 無條件捨去至百位
     const finalPrizeRounded = Math.floor(finalPrize / 100) * 100;
+    const finalRoundedLoss = finalPrize - finalPrizeRounded; // 最終捨去的尾數
 
     finalPlayerPrizes.push({
       memberId: player.memberId,
@@ -283,10 +286,11 @@ export function calculateICMPrize(
       chipBasedPrize: chipBasedRounded,
       topThreeBonus,
       prizeAmount: finalPrizeRounded,
+      roundedLoss: finalRoundedLoss, // 記錄捨去的尾數
     });
   }
 
-  // ========== 7️⃣ 差額調整：將捨去誤差加到第一名 ==========
+  // ========== 7️⃣ 差額調整：優先補齊捨去尾數最多的玩家 ==========
   // 計算總分配金額（所有玩家獎金總和）
   const totalDistributed = finalPlayerPrizes.reduce((sum, p) => sum + p.prizeAmount, 0);
 
@@ -297,21 +301,49 @@ export function calculateICMPrize(
   const remainder = netPoolForVerification - totalDistributed;
 
   let adjustmentAmount = 0;
+  let adjustedPlayerIndex = -1;
+  
   if (finalPlayerPrizes.length > 0 && Math.abs(remainder) > 0.01) {
     adjustmentAmount = remainder;
-    finalPlayerPrizes[0].prizeAmount += remainder;
     
-    // 確保第一名金額不為負數
-    if (finalPlayerPrizes[0].prizeAmount < 0) {
-      finalPlayerPrizes[0].prizeAmount = 0;
-      adjustmentAmount = -finalPlayerPrizes[0].prizeAmount;
+    // 找出捨去尾數最多的玩家（優先補齊）
+    // 只考慮有獎金的玩家（prizeAmount > 0）
+    const eligiblePlayers = finalPlayerPrizes
+      .map((p, index) => ({ ...p, index, roundedLoss: p.roundedLoss || 0 }))
+      .filter(p => p.prizeAmount > 0 && p.roundedLoss > 0);
+    
+    if (eligiblePlayers.length > 0) {
+      // 按捨去尾數從大到小排序
+      eligiblePlayers.sort((a, b) => b.roundedLoss - a.roundedLoss);
+      adjustedPlayerIndex = eligiblePlayers[0].index;
+      
+      console.log('🔍 差額調整：找到捨去尾數最多的玩家:', {
+        玩家: finalPlayerPrizes[adjustedPlayerIndex].memberId,
+        捨去尾數: eligiblePlayers[0].roundedLoss,
+        調整前獎金: finalPlayerPrizes[adjustedPlayerIndex].prizeAmount,
+      });
+    } else {
+      // 如果沒有捨去尾數的玩家，則調整到第一名
+      adjustedPlayerIndex = 0;
+      console.log('🔍 差額調整：沒有捨去尾數的玩家，調整到第一名');
+    }
+    
+    // 將差額加到選中的玩家
+    finalPlayerPrizes[adjustedPlayerIndex].prizeAmount += remainder;
+    
+    // 確保金額不為負數
+    if (finalPlayerPrizes[adjustedPlayerIndex].prizeAmount < 0) {
+      finalPlayerPrizes[adjustedPlayerIndex].prizeAmount = 0;
+      adjustmentAmount = -finalPlayerPrizes[adjustedPlayerIndex].prizeAmount;
     }
 
     console.log('🔍 淨獎池差額調整:', {
       淨獎池: netPoolForVerification,
       已分配總額: totalDistributed,
       差額: remainder,
-      調整後第一名獎金: finalPlayerPrizes[0].prizeAmount,
+      調整玩家: finalPlayerPrizes[adjustedPlayerIndex].memberId,
+      調整後獎金: finalPlayerPrizes[adjustedPlayerIndex].prizeAmount,
+      捨去尾數: finalPlayerPrizes[adjustedPlayerIndex].roundedLoss,
     });
   }
 
