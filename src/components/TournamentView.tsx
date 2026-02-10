@@ -320,7 +320,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
       setEditedPlayers(JSON.parse(JSON.stringify(tournament.players))); // 深拷貝
       // 重置提撥金編輯值
       if (tournament.customConfig?.totalDeduction !== undefined) {
-        setEditedTotalDeduction(tournament.customConfig.totalDeduction.toString());
+        setEditedTotalDeduction(tournament.customConfig?.totalDeduction.toString() || '');
       } else if (tournament.totalDeduction !== undefined) {
         setEditedTotalDeduction(tournament.totalDeduction.toString());
       } else {
@@ -329,7 +329,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
 
       // 重置活動獎金編輯值
       if (tournament.customConfig?.activityBonus !== undefined) {
-        setEditedActivityBonus(tournament.customConfig.activityBonus.toString());
+        setEditedActivityBonus(tournament.customConfig?.activityBonus.toString() || '');
       } else if (tournament.activityBonus !== undefined) {
         setEditedActivityBonus(tournament.activityBonus.toString());
       } else {
