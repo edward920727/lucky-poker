@@ -24,18 +24,100 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
     if (!exportRef.current) return;
 
     try {
+      // 顯示載入提示
+      const loadingMessage = document.createElement('div');
+      loadingMessage.textContent = '正在生成圖片，請稍候...';
+      loadingMessage.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 8px; z-index: 10000;';
+      document.body.appendChild(loadingMessage);
+
+      // 確保字體已加載
+      await document.fonts.ready;
+
+      // 等待一小段時間確保 DOM 完全渲染
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // 保存原始樣式
+      const originalStyles = {
+        position: exportRef.current.style.position,
+        left: exportRef.current.style.left,
+        top: exportRef.current.style.top,
+        zIndex: exportRef.current.style.zIndex,
+        visibility: exportRef.current.style.visibility,
+        opacity: exportRef.current.style.opacity,
+        transform: exportRef.current.style.transform,
+      };
+      
+      // 臨時讓元素可見但不在視窗內（使用 transform 而不是 left）
+      exportRef.current.style.position = 'absolute';
+      exportRef.current.style.left = '0px';
+      exportRef.current.style.top = '0px';
+      exportRef.current.style.zIndex = '-9999';
+      exportRef.current.style.visibility = 'visible';
+      exportRef.current.style.opacity = '1';
+      exportRef.current.style.transform = 'translateX(-9999px)';
+
+      // 強制重排和重繪
+      void exportRef.current.offsetHeight;
+      await new Promise(resolve => setTimeout(resolve, 200));
+
       const canvas = await html2canvas(exportRef.current, {
         backgroundColor: '#111827',
         scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        removeContainer: true,
+        imageTimeout: 15000,
+        onclone: (clonedDoc, element) => {
+          // 確保克隆文檔中的樣式正確應用
+          const clonedElement = element as HTMLElement;
+          if (clonedElement) {
+            clonedElement.style.visibility = 'visible';
+            clonedElement.style.opacity = '1';
+            clonedElement.style.transform = 'translateX(0)';
+            clonedElement.style.position = 'relative';
+            clonedElement.style.left = '0';
+            clonedElement.style.top = '0';
+            clonedElement.style.zIndex = '1';
+          }
+          
+          // 確保所有字體樣式都正確
+          const allElements = clonedDoc.querySelectorAll('*');
+          allElements.forEach((el) => {
+            const htmlEl = el as HTMLElement;
+            if (htmlEl.style) {
+              htmlEl.style.visibility = 'visible';
+              htmlEl.style.opacity = '1';
+            }
+          });
+        },
       });
+
+      // 恢復原始樣式
+      Object.entries(originalStyles).forEach(([key, value]) => {
+        (exportRef.current!.style as any)[key] = value || '';
+      });
+
+      // 移除載入提示
+      if (document.body.contains(loadingMessage)) {
+        document.body.removeChild(loadingMessage);
+      }
 
       const link = document.createElement('a');
       link.download = `${config.name}_結算結存表_${getTaiwanTodayDateKey()}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = canvas.toDataURL('image/png', 1.0);
+      document.body.appendChild(link);
       link.click();
+      
+      // 延遲移除連結，確保下載開始
+      setTimeout(() => {
+        if (document.body.contains(link)) {
+          document.body.removeChild(link);
+        }
+      }, 100);
     } catch (error) {
       console.error('導出失敗:', error);
-      alert('導出失敗，請重試');
+      alert(`導出失敗：${error instanceof Error ? error.message : '未知錯誤'}，請重試`);
     }
   };
 
@@ -57,7 +139,12 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
       </button>
 
       {/* 隱藏的導出內容 */}
-      <div ref={exportRef} className="fixed -left-[9999px] bg-gray-900 text-white p-8 w-[800px]">
+      <div 
+        ref={exportRef} 
+        data-export-content
+        className="fixed -left-[9999px] bg-gray-900 text-white p-8 w-[800px]"
+        style={{ visibility: 'visible', opacity: 1 }}
+      >
         <div className="text-center mb-6">
           <h1 className="text-4xl font-bold mb-2">
             {tournamentName || config.name}
