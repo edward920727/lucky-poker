@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { getCurrentIP, saveAuthorizedIP, getAuthorizedIP } from '../../utils/systemSecurity';
-import { getCurrentUsername } from '../utils/auth';
 
 interface SystemSecuritySettingsProps {
   onBack: () => void;
