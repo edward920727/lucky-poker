@@ -12,7 +12,9 @@ interface FinancialStatsProps {
 export default function FinancialStats({ players, tournamentType, customConfig }: FinancialStatsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const isCustom = tournamentType === 'custom' && customConfig;
-  const entryFee = isCustom ? customConfig.entryFee : parseInt(tournamentType);
+  const entryFee = isCustom 
+    ? customConfig.entryFee 
+    : (tournamentType === 'custom' ? 0 : (tournamentType ? parseInt(tournamentType) : 0));
   
   const calculateByPaymentMethod = (method: PaymentMethod) => {
     return players

@@ -239,6 +239,16 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
     return null;
   }, [tournament, displayPlayers, isEditMode]);
 
+  // 檢查是否有獎金調整（必須在 prizeCalculation 定義之後）
+  const hasPrizeAdjustments = useMemo(() => {
+    if (!prizeCalculation || !isAdjustingPrizes) return false;
+    return Object.keys(adjustedPrizes).length > 0 && 
+      prizeCalculation.playerPrizes.some(p => {
+        const adjusted = adjustedPrizes[p.memberId];
+        return adjusted !== undefined && adjusted !== p.prizeAmount;
+      });
+  }, [adjustedPrizes, prizeCalculation, isAdjustingPrizes]);
+
   const handleSave = () => {
     if (!tournament) return;
 
@@ -507,16 +517,30 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                   <span>✏️</span>
                   <span>修改賽事</span>
                 </button>
-                {prizeCalculation && prizeCalculation.playerPrizes.length > 0 && (
+                {prizeCalculation && prizeCalculation.playerPrizes.length > 0 && !isAdjustingPrizes && (
                   <button
-                    onClick={() => setIsAdjustingPrizes(!isAdjustingPrizes)}
-                    className={`px-4 md:px-6 py-2 md:py-3 rounded-xl text-sm md:text-base font-semibold transition-all duration-200 border-2 relative z-10 cursor-pointer ${
-                      isAdjustingPrizes 
-                        ? 'bg-yellow-600 hover:bg-yellow-700 text-white border-yellow-500' 
-                        : 'bg-gray-600 hover:bg-gray-700 text-white border-gray-500'
-                    }`}
+                    onClick={() => {
+                      // 打開調整界面
+                      setIsAdjustingPrizes(true);
+                      
+                      // 初始化 adjustedPrizes
+                      if (prizeCalculation) {
+                        // 如果有已保存的調整獎金，使用它；否則從計算結果初始化
+                        if (tournament?.adjustedPrizes && Object.keys(tournament.adjustedPrizes).length > 0) {
+                          setAdjustedPrizes(tournament.adjustedPrizes);
+                        } else {
+                          // 從計算結果初始化
+                          const initialPrizes: Record<string, number> = {};
+                          prizeCalculation.playerPrizes.forEach(p => {
+                            initialPrizes[p.memberId] = p.prizeAmount;
+                          });
+                          setAdjustedPrizes(initialPrizes);
+                        }
+                      }
+                    }}
+                    className="px-4 md:px-6 py-2 md:py-3 rounded-xl text-sm md:text-base font-semibold transition-all duration-200 border-2 relative z-10 bg-gray-600 hover:bg-gray-700 text-white border-gray-500 cursor-pointer"
                   >
-                    {isAdjustingPrizes ? '✓ 完成調整' : '💰 調整獎金'}
+                    💰 調整獎金
                   </button>
                 )}
                 <div className="w-full sm:w-auto">
@@ -763,25 +787,54 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
         {/* 獎金調整界面 */}
         {isAdjustingPrizes && prizeCalculation && prizeCalculation.playerPrizes.length > 0 && !isEditMode && (
           <div className="bg-gray-800 rounded-xl p-4 md:p-6 mb-6 border-2 border-yellow-500 relative z-10">
-            <h3 className="text-xl font-bold text-yellow-400 mb-4">手動調整獎金</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-yellow-400">手動調整獎金</h3>
+              {hasPrizeAdjustments && (
+                <span className="px-3 py-1 bg-green-600 text-white text-sm rounded-lg font-semibold">
+                  ✓ 已調整
+                </span>
+              )}
+            </div>
+            
             <div className="space-y-3 max-h-96 overflow-y-auto mb-4">
               {prizeCalculation.playerPrizes.map((playerPrize) => {
                 const player = displayPlayers.find(p => String(p.memberId) === String(playerPrize.memberId));
                 if (!player) return null;
                 
+                const currentPrize = adjustedPrizes[playerPrize.memberId] ?? playerPrize.prizeAmount;
+                const isChanged = currentPrize !== playerPrize.prizeAmount;
+                
                 return (
-                  <div key={playerPrize.memberId} className="flex items-center gap-4 bg-gray-700 p-3 rounded-lg">
+                  <div 
+                    key={playerPrize.memberId} 
+                    className={`flex items-center gap-4 p-3 rounded-lg transition-all ${
+                      isChanged 
+                        ? 'bg-yellow-900/30 border-2 border-yellow-500/50' 
+                        : 'bg-gray-700 border border-gray-600'
+                    }`}
+                  >
                     <div className="flex-1">
-                      <div className="font-mono font-bold text-lg text-poker-gold-300">{player.memberId}</div>
-                      <div className="text-sm text-gray-400">
-                        排名: {playerPrize.rank} | 籌碼: {player.currentChips.toLocaleString()} | 原獎金: NT$ {playerPrize.prizeAmount.toLocaleString()}
+                      <div className="flex items-center gap-2">
+                        <div className="font-mono font-bold text-lg text-poker-gold-300">{player.memberId}</div>
+                        {isChanged && (
+                          <span className="px-2 py-0.5 bg-yellow-600 text-white text-xs rounded font-semibold">
+                            已修改
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-400 mt-1">
+                        排名: {playerPrize.rank} | 籌碼: {player.currentChips.toLocaleString()}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        原獎金: NT$ {playerPrize.prizeAmount.toLocaleString()}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-gray-300">NT$</span>
                       <input
                         type="number"
-                        value={adjustedPrizes[playerPrize.memberId] ?? playerPrize.prizeAmount}
+                        min="0"
+                        value={currentPrize}
                         onChange={(e) => {
                           const value = parseInt(e.target.value) || 0;
                           setAdjustedPrizes(prev => ({
@@ -790,59 +843,127 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                           }));
                         }}
                         onWheel={(e) => {
-                          e.preventDefault();
                           e.currentTarget.blur();
                         }}
-                        className="w-32 px-3 py-2 bg-gray-600 rounded-lg text-white text-right focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        className={`w-32 px-3 py-2 rounded-lg text-white text-right focus:outline-none focus:ring-2 transition-all ${
+                          isChanged
+                            ? 'bg-yellow-800 border-2 border-yellow-500 focus:ring-yellow-500'
+                            : 'bg-gray-600 border border-gray-500 focus:ring-yellow-500'
+                        }`}
                       />
                     </div>
                   </div>
                 );
               })}
             </div>
+            
             <div className="pt-4 border-t border-gray-600">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-300">調整後總獎金:</span>
-                <span className="text-xl font-bold text-white">
-                  NT$ {Object.values(adjustedPrizes).reduce((sum, p) => sum + p, 0).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-300">淨獎池:</span>
-                <span className="text-xl font-bold text-white">
-                  NT$ {prizeCalculation.netPool.toLocaleString()}
-                </span>
-              </div>
-              <div className={`flex justify-between items-center ${Math.abs(prizeCalculation.netPool - Object.values(adjustedPrizes).reduce((sum, p) => sum + p, 0)) < 0.01 ? 'text-green-400' : 'text-yellow-400'}`}>
-                <span>差額:</span>
-                <span className="text-lg font-bold">
-                  {prizeCalculation.netPool - Object.values(adjustedPrizes).reduce((sum, p) => sum + p, 0) > 0 ? '+' : ''}
-                  {(prizeCalculation.netPool - Object.values(adjustedPrizes).reduce((sum, p) => sum + p, 0)).toLocaleString()}
-                </span>
-              </div>
-              {Math.abs(prizeCalculation.netPool - Object.values(adjustedPrizes).reduce((sum, p) => sum + p, 0)) >= 0.01 && (
-                <p className="text-xs text-yellow-400 mt-2">
-                  ⚠️ 調整後總獎金與淨獎池不一致，請檢查
-                </p>
-              )}
-              <button
-                onClick={() => {
-                  // 保存調整後的獎金到賽事紀錄
-                  if (tournament) {
-                    const updatedTournament = {
-                      ...tournament,
-                      adjustedPrizes: adjustedPrizes, // 保存調整後的獎金
-                    };
-                    updateTournament(updatedTournament);
-                    setTournament(updatedTournament);
-                    setIsAdjustingPrizes(false);
-                    alert('獎金調整已保存！');
-                  }
-                }}
-                className="mt-4 w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-all duration-200"
-              >
-                💾 保存調整
-              </button>
+              {(() => {
+                // 計算當前顯示的總獎金
+                const currentPrizes = Object.keys(adjustedPrizes).length > 0 
+                  ? adjustedPrizes 
+                  : (() => {
+                      const initialPrizes: Record<string, number> = {};
+                      prizeCalculation.playerPrizes.forEach(p => {
+                        initialPrizes[p.memberId] = p.prizeAmount;
+                      });
+                      return initialPrizes;
+                    })();
+                const adjustedTotal = Object.values(currentPrizes).reduce((sum, p) => sum + p, 0);
+                const difference = prizeCalculation.netPool - adjustedTotal;
+                const isBalanced = Math.abs(difference) < 0.01;
+                
+                return (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="bg-gray-700 rounded-lg p-3 border border-gray-600">
+                        <div className="text-sm text-gray-400 mb-1">調整後總獎金</div>
+                        <div className="text-xl font-bold text-white">
+                          NT$ {adjustedTotal.toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="bg-gray-700 rounded-lg p-3 border border-gray-600">
+                        <div className="text-sm text-gray-400 mb-1">淨獎池</div>
+                        <div className="text-xl font-bold text-white">
+                          NT$ {prizeCalculation.netPool.toLocaleString()}
+                        </div>
+                      </div>
+                      <div className={`rounded-lg p-3 border-2 ${
+                        isBalanced 
+                          ? 'bg-green-900/30 border-green-500/50' 
+                          : 'bg-yellow-900/30 border-yellow-500/50'
+                      }`}>
+                        <div className="text-sm text-gray-300 mb-1">差額</div>
+                        <div className={`text-xl font-bold ${isBalanced ? 'text-green-300' : 'text-yellow-300'}`}>
+                          {difference > 0 ? '+' : ''}
+                          {difference.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {!isBalanced && (
+                      <div className="bg-yellow-900/20 border border-yellow-600/50 rounded-lg p-3 mb-4">
+                        <p className="text-sm text-yellow-400 flex items-center gap-2">
+                          <span>⚠️</span>
+                          <span>調整後總獎金與淨獎池不一致，請檢查並調整</span>
+                        </p>
+                      </div>
+                    )}
+                    
+                    {isBalanced && hasPrizeAdjustments && (
+                      <div className="bg-green-900/20 border border-green-600/50 rounded-lg p-3 mb-4">
+                        <p className="text-sm text-green-400 flex items-center gap-2">
+                          <span>✓</span>
+                          <span>獎金分配已平衡，可以保存</span>
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* 調整完成按鈕 */}
+                    <div className="flex gap-3 mt-4">
+                      <button
+                        onClick={() => {
+                          // 取消調整，恢復原始值
+                          if (prizeCalculation) {
+                            const initialPrizes: Record<string, number> = {};
+                            prizeCalculation.playerPrizes.forEach(p => {
+                              initialPrizes[p.memberId] = p.prizeAmount;
+                            });
+                            setAdjustedPrizes(initialPrizes);
+                          }
+                          setIsAdjustingPrizes(false);
+                        }}
+                        className="flex-1 px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold transition-all duration-200"
+                      >
+                        取消
+                      </button>
+                      <button
+                        onClick={() => {
+                          // 保存調整
+                          if (tournament) {
+                            const updatedTournament = {
+                              ...tournament,
+                              adjustedPrizes,
+                            };
+                            updateTournament(updatedTournament);
+                            setTournament(updatedTournament);
+                            setIsAdjustingPrizes(false);
+                            alert('獎金調整已保存！');
+                          }
+                        }}
+                        disabled={!hasPrizeAdjustments}
+                        className={`flex-1 px-4 py-3 rounded-lg font-semibold transition-all duration-200 ${
+                          hasPrizeAdjustments
+                            ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer'
+                            : 'bg-gray-500 text-gray-400 cursor-not-allowed opacity-50'
+                        }`}
+                      >
+                        ✓ 調整完成
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         )}
