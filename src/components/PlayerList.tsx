@@ -116,6 +116,7 @@ export default function PlayerList({
                         const discount = value === '' ? undefined : Math.max(0, parseFloat(value) || 0);
                         onUpdatePlayer(player.id, { couponDiscount: discount });
                       }}
+                      onWheel={(e) => e.currentTarget.blur()}
                       className="w-16 px-2 py-1 bg-gray-700 rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-poker-gold-500"
                       min="0"
                     />
@@ -153,13 +154,14 @@ export default function PlayerList({
               <div className="flex items-center justify-between">
                 <span className="text-gray-400 text-sm">當前碼量</span>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    value={player.currentChips || ''}
-                    onChange={(e) => handleChipChange(player.id, e.target.value)}
-                    className="w-32 px-3 py-2 bg-gray-700 rounded-lg text-right font-semibold"
-                    min="0"
-                  />
+                    <input
+                      type="number"
+                      value={player.currentChips || ''}
+                      onChange={(e) => handleChipChange(player.id, e.target.value)}
+                      onWheel={(e) => e.currentTarget.blur()}
+                      className="w-32 px-3 py-2 bg-gray-700 rounded-lg text-right font-semibold"
+                      min="0"
+                    />
                   <span className="text-gray-400 text-sm">碼</span>
                 </div>
               </div>
@@ -220,6 +222,7 @@ export default function PlayerList({
                       type="number"
                       value={player.currentChips || ''}
                       onChange={(e) => handleChipChange(player.id, e.target.value)}
+                      onWheel={(e) => e.currentTarget.blur()}
                       className="w-32 px-2 py-1 bg-gray-700 rounded text-right"
                       min="0"
                     />
@@ -258,6 +261,7 @@ export default function PlayerList({
                             const discount = value === '' ? undefined : Math.max(0, parseFloat(value) || 0);
                             onUpdatePlayer(player.id, { couponDiscount: discount });
                           }}
+                          onWheel={(e) => e.currentTarget.blur()}
                           className="w-20 px-2 py-1 bg-gray-700 rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-poker-gold-500"
                           min="0"
                         />

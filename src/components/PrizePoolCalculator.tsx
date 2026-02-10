@@ -169,6 +169,9 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
                       setEntryFee(parseInt(e.target.value) || 0);
                       setIsManualEntryFee(true);
                     }}
+                    onWheel={(e) => {
+                      e.currentTarget.blur();
+                    }}
                     className={`w-full px-3 py-2 bg-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-poker-gold-500 ${
                       !isManualEntryFee ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : ''
                     }`}
@@ -217,6 +220,9 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
                       setTotalGroups(parseInt(e.target.value) || 0);
                       setIsManualGroups(true);
                     }}
+                    onWheel={(e) => {
+                      e.currentTarget.blur();
+                    }}
                     className={`w-full px-3 py-2 bg-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-poker-gold-500 ${
                       !isManualGroups ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : ''
                     }`}
@@ -252,6 +258,9 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
                       if (!isNaN(numValue)) {
                         setDeduction(Math.max(0, numValue));
                       }
+                    }}
+                    onWheel={(e) => {
+                      e.currentTarget.blur();
                     }}
                     className="w-full px-3 py-2 bg-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
                   />
@@ -294,6 +303,10 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
                       setActivityBonus(Math.max(0, numValue));
                     }
                   }}
+                  onWheel={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.blur();
+                  }}
                   className="w-full px-3 py-2 bg-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
                   placeholder="0"
                 />
@@ -321,6 +334,9 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
                         setTotalDeduction(Math.max(0, numValue));
                         setIsManualTotalDeduction(true);
                       }
+                    }}
+                    onWheel={(e) => {
+                      e.currentTarget.blur();
                     }}
                     className="w-full px-3 py-2 bg-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
                     placeholder="0"

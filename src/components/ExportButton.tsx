@@ -143,6 +143,7 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
                           [key]: Number.isFinite(num) ? Math.max(0, Math.trunc(num)) : 0,
                         }));
                       }}
+                      onWheel={(e) => e.currentTarget.blur()}
                       className="w-32 px-3 py-2 bg-gray-900 rounded-lg text-white text-right border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     />
                   </div>

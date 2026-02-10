@@ -167,6 +167,7 @@ export default function CustomTournamentForm({ onSubmit, onCancel }: CustomTourn
                   setActivityBonus(e.target.value);
                   setIsManualEdit(prev => ({ ...prev, activityBonus: true }));
                 }}
+                onWheel={(e) => e.currentTarget.blur()}
                 className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-poker-gold-500 focus:outline-none text-black text-lg"
                 placeholder="例如：1000"
                 min="0"
@@ -206,6 +207,7 @@ export default function CustomTournamentForm({ onSubmit, onCancel }: CustomTourn
               type="number"
               value={entryFee}
               onChange={(e) => setEntryFee(e.target.value)}
+              onWheel={(e) => e.currentTarget.blur()}
               className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-poker-gold-500 focus:outline-none text-black text-lg"
               placeholder="例如：5000"
               min="1"
@@ -226,6 +228,7 @@ export default function CustomTournamentForm({ onSubmit, onCancel }: CustomTourn
                   setAdministrativeFee(e.target.value);
                   setIsManualEdit(prev => ({ ...prev, administrativeFee: true }));
                 }}
+                onWheel={(e) => e.currentTarget.blur()}
                 className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-poker-gold-500 focus:outline-none text-black text-lg"
                 placeholder="例如：600"
                 min="0"
@@ -265,6 +268,7 @@ export default function CustomTournamentForm({ onSubmit, onCancel }: CustomTourn
                   setTotalDeduction(e.target.value);
                   setIsManualEdit(prev => ({ ...prev, totalDeduction: true }));
                 }}
+                onWheel={(e) => e.currentTarget.blur()}
                 className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-poker-gold-500 focus:outline-none text-black text-lg"
                 placeholder="例如：500"
                 min="0"
@@ -311,6 +315,7 @@ export default function CustomTournamentForm({ onSubmit, onCancel }: CustomTourn
                       setTopThreeSplitFirst(e.target.value);
                       setIsManualEdit(prev => ({ ...prev, topThreeSplit: true }));
                     }}
+                    onWheel={(e) => e.currentTarget.blur()}
                     className="flex-1 px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-poker-gold-500 focus:outline-none text-black"
                     min="0"
                     max="100"
@@ -328,6 +333,7 @@ export default function CustomTournamentForm({ onSubmit, onCancel }: CustomTourn
                     setTopThreeSplitSecond(e.target.value);
                     setIsManualEdit(prev => ({ ...prev, topThreeSplit: true }));
                   }}
+                  onWheel={(e) => e.currentTarget.blur()}
                   className="w-full px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-poker-gold-500 focus:outline-none text-black"
                   min="0"
                   max="100"
@@ -345,6 +351,7 @@ export default function CustomTournamentForm({ onSubmit, onCancel }: CustomTourn
                       setTopThreeSplitThird(e.target.value);
                       setIsManualEdit(prev => ({ ...prev, topThreeSplit: true }));
                     }}
+                    onWheel={(e) => e.currentTarget.blur()}
                     className="flex-1 px-3 py-2 rounded-lg border-2 border-gray-300 focus:border-poker-gold-500 focus:outline-none text-black"
                     min="0"
                     max="100"
@@ -386,6 +393,7 @@ export default function CustomTournamentForm({ onSubmit, onCancel }: CustomTourn
               type="number"
               value={startChip}
               onChange={(e) => setStartChip(e.target.value)}
+              onWheel={(e) => e.currentTarget.blur()}
               className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-poker-gold-500 focus:outline-none text-black text-lg"
               placeholder="例如：50000"
               min="1"

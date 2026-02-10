@@ -140,6 +140,7 @@ export default function TournamentSettlement({ onBack, onSave }: TournamentSettl
                             min="0"
                             value={currentFee}
                             onChange={(e) => handleFeeChange(entryFee, e.target.value)}
+                            onWheel={(e) => e.currentTarget.blur()}
                             className="w-32 px-4 py-2 bg-gray-700 border-2 border-poker-gold-600 rounded-lg text-white text-lg focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
                             autoFocus
                           />

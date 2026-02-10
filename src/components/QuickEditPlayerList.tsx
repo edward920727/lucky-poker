@@ -138,6 +138,7 @@ export default function QuickEditPlayerList({
                   onFocus={() => setFocusedInput(player.id)}
                   onBlur={(e) => handleChipBlur(player.id, e.target.value)}
                   onChange={(e) => handleChipChange(player.id, e.target.value)}
+                  onWheel={(e) => e.currentTarget.blur()}
                   className="w-full px-4 py-4 bg-gray-700 rounded-xl text-right text-2xl font-bold text-white focus:outline-none focus:ring-2 focus:ring-poker-gold-500 focus:ring-opacity-50"
                   placeholder="0"
                   min="0"

@@ -307,6 +307,7 @@ export default function TournamentDashboard({
                     const value = parseInt(e.target.value);
                     setTournamentNumber(isNaN(value) || value < 1 ? null : value);
                   }}
+                  onWheel={(e) => e.currentTarget.blur()}
                   placeholder="輸入場次號碼"
                   className="flex-1 px-4 py-3 bg-gray-800 border-2 border-poker-gold-600 rounded-xl text-white text-base focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
                   autoFocus

@@ -582,6 +582,9 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                     min="0"
                     value={editedTotalDeduction}
                     onChange={(e) => setEditedTotalDeduction(e.target.value)}
+                    onWheel={(e) => {
+                      e.currentTarget.blur();
+                    }}
                     className="w-full px-4 py-3 bg-gray-700 border-2 border-poker-gold-600 rounded-xl text-white text-lg focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
                     placeholder="輸入單場總提撥金"
                   />
@@ -600,6 +603,9 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                     min="0"
                     value={editedActivityBonus}
                     onChange={(e) => setEditedActivityBonus(e.target.value)}
+                    onWheel={(e) => {
+                      e.currentTarget.blur();
+                    }}
                     className="w-full px-4 py-3 bg-gray-700 border-2 border-poker-gold-600 rounded-xl text-white text-lg focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
                     placeholder="輸入活動獎金"
                   />
@@ -782,6 +788,10 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                             ...prev,
                             [playerPrize.memberId]: Math.max(0, value)
                           }));
+                        }}
+                        onWheel={(e) => {
+                          e.preventDefault();
+                          e.currentTarget.blur();
                         }}
                         className="w-32 px-3 py-2 bg-gray-600 rounded-lg text-white text-right focus:outline-none focus:ring-2 focus:ring-yellow-500"
                       />
