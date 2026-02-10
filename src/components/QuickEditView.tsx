@@ -18,7 +18,7 @@ export default function QuickEditView({ tournamentId, onBack }: QuickEditViewPro
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
-  // 載入賽事數據的函數
+  // 載入賽事數據的函數（集中處理，比對是否需要更新）
   const loadTournamentData = useCallback(() => {
     const record = getTournamentById(tournamentId);
     if (record) {
@@ -39,27 +39,19 @@ export default function QuickEditView({ tournamentId, onBack }: QuickEditViewPro
         setTournament(record);
       }
     }
-  }, [tournamentId, tournament, players]);
+  }, [tournamentId, players, tournament]);
 
   // 初始載入和監聽數據變化
   useEffect(() => {
-    // 立即載入一次
-    const record = getTournamentById(tournamentId);
-    if (record) {
-      setTournament(record);
-      setPlayers(JSON.parse(JSON.stringify(record.players || []))); // 深拷貝
-    }
+    // 立即載入一次（使用集中處理函數）
+    loadTournamentData();
 
     // 監聽 localStorage 變化（跨標籤頁同步）
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'lucky_poker_tournaments' && e.newValue) {
         // 重新載入數據
         setTimeout(() => {
-          const updatedRecord = getTournamentById(tournamentId);
-          if (updatedRecord) {
-            setTournament(updatedRecord);
-            setPlayers(JSON.parse(JSON.stringify(updatedRecord.players || [])));
-          }
+          loadTournamentData();
         }, 100); // 稍微延遲，確保數據已寫入
       }
     };
@@ -70,11 +62,7 @@ export default function QuickEditView({ tournamentId, onBack }: QuickEditViewPro
     const handleTournamentUpdate = (e: CustomEvent) => {
       if (e.detail?.tournamentId === tournamentId) {
         setTimeout(() => {
-          const updatedRecord = getTournamentById(tournamentId);
-          if (updatedRecord) {
-            setTournament(updatedRecord);
-            setPlayers(JSON.parse(JSON.stringify(updatedRecord.players || [])));
-          }
+          loadTournamentData();
         }, 100);
       }
     };
@@ -83,19 +71,7 @@ export default function QuickEditView({ tournamentId, onBack }: QuickEditViewPro
 
     // 定期檢查數據是否有更新（用於同一個標籤頁內的更新）
     const intervalId = setInterval(() => {
-      const currentRecord = getTournamentById(tournamentId);
-      if (currentRecord) {
-        const currentPlayerIds = new Set(currentRecord.players?.map(p => p.id) || []);
-        const existingPlayerIds = new Set(players.map(p => p.id));
-        
-        // 如果玩家列表有變化，更新狀態
-        if (currentPlayerIds.size !== existingPlayerIds.size ||
-            [...currentPlayerIds].some(id => !existingPlayerIds.has(id)) ||
-            [...existingPlayerIds].some(id => !currentPlayerIds.has(id))) {
-          setTournament(currentRecord);
-          setPlayers(JSON.parse(JSON.stringify(currentRecord.players || [])));
-        }
-      }
+      loadTournamentData();
     }, 500); // 每 500ms 檢查一次
 
     return () => {
@@ -103,7 +79,7 @@ export default function QuickEditView({ tournamentId, onBack }: QuickEditViewPro
       window.removeEventListener('tournament-updated' as any, handleTournamentUpdate);
       clearInterval(intervalId);
     };
-  }, [tournamentId, players]);
+  }, [tournamentId, loadTournamentData]);
 
   // 計算 entryFee
   const entryFee = useMemo(() => {

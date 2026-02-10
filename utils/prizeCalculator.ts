@@ -351,8 +351,8 @@ export function calculateICMPrize(
  */
 export function calculatePrize(
   totalPrizePool: number,
-  topThreePercentages: [number, number, number],
-  players: Player[]
+  _topThreePercentages: [number, number, number],
+  _players: Player[]
 ): PrizeCalculationResult {
   // 此函數保留用於向後兼容，但建議使用 calculateICMPrize
   // 這裡可以實現一個簡單的轉換邏輯，或者直接調用 calculateICMPrize
