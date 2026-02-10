@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAllUsersAsync, addUserAsync, deleteUserAsync, User, isProtectedUser, setupUsersRealtimeSync } from '../utils/userManagement';
+import { getAllUsersAsync, addUserAsync, deleteUserAsync, User, isProtectedUser, setupUsersRealtimeSync, isAdminAsync } from '../utils/userManagement';
 import { logAction } from '../../utils/auditLog';
 import { getCurrentUsername } from '../utils/auth';
 
@@ -16,9 +16,19 @@ export default function UserManagement({ onBack }: UserManagementProps) {
   const [success, setSuccess] = useState('');
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isCurrentUserAdmin, setIsCurrentUserAdmin] = useState(false);
 
   useEffect(() => {
-    setCurrentUser(getCurrentUsername());
+    const username = getCurrentUsername();
+    setCurrentUser(username);
+    
+    // 檢查當前用戶是否為管理員
+    if (username) {
+      isAdminAsync(username).then(isAdmin => {
+        setIsCurrentUserAdmin(isAdmin);
+      });
+    }
+    
     loadUsers();
 
     // 設置實時同步：當其他裝置創建或刪除帳號時，自動更新
@@ -157,7 +167,8 @@ export default function UserManagement({ onBack }: UserManagementProps) {
           </div>
         )}
 
-        {/* 新增用戶表單 */}
+        {/* 新增用戶表單 - 只有管理員可以看到 */}
+        {isCurrentUserAdmin && (
         <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-2xl p-4 md:p-6 mb-6 border-2 border-poker-gold-600 border-opacity-40 shadow-xl shadow-poker-gold-500/20">
           <h2 className="text-xl md:text-2xl font-display font-bold text-poker-gold-400 mb-4">
             新增用戶
@@ -214,6 +225,18 @@ export default function UserManagement({ onBack }: UserManagementProps) {
             </label>
           </div>
         </div>
+        )}
+
+        {/* 非管理員提示 */}
+        {!isCurrentUserAdmin && (
+          <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-2xl p-4 md:p-6 mb-6 border-2 border-poker-gold-600 border-opacity-40 shadow-xl shadow-poker-gold-500/20">
+            <div className="text-center py-4">
+              <p className="text-poker-gold-300 text-lg font-semibold">
+                ⚠️ 只有管理員可以新增用戶
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* 用戶列表 */}
         <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-2xl p-4 md:p-6 border-2 border-poker-gold-600 border-opacity-40 shadow-xl shadow-poker-gold-500/20">

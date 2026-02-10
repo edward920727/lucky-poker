@@ -15,6 +15,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { firebaseConfig, isFirebaseConfigured } from '../../utils/firebaseConfig';
+import { getCurrentUsername } from './auth';
 
 const STORAGE_KEY = 'lucky_poker_users';
 const DEFAULT_ADMIN_USERNAME = 'gi';
@@ -232,8 +233,20 @@ function saveUsersLocal(users: User[]): void {
 
 /**
  * 添加新用戶（異步，支援雲端同步）
+ * 只有管理員可以新增用戶
  */
 export async function addUserAsync(username: string, password: string, isAdmin: boolean = false): Promise<{ success: boolean; message: string }> {
+  // 檢查當前用戶是否為管理員
+  const currentUsername = getCurrentUsername();
+  if (!currentUsername) {
+    return { success: false, message: '請先登入' };
+  }
+
+  const isCurrentUserAdmin = await isAdminAsync(currentUsername);
+  if (!isCurrentUserAdmin) {
+    return { success: false, message: '只有管理員可以新增用戶' };
+  }
+
   const users = await getAllUsersAsync();
   
   // 檢查用戶名是否已存在
@@ -264,8 +277,20 @@ export async function addUserAsync(username: string, password: string, isAdmin: 
 
 /**
  * 添加新用戶（同步版本，用於向後兼容）
+ * 只有管理員可以新增用戶
  */
 export function addUser(username: string, password: string, isAdmin: boolean = false): { success: boolean; message: string } {
+  // 檢查當前用戶是否為管理員
+  const currentUsername = getCurrentUsername();
+  if (!currentUsername) {
+    return { success: false, message: '請先登入' };
+  }
+
+  const isCurrentUserAdmin = isAdmin(currentUsername);
+  if (!isCurrentUserAdmin) {
+    return { success: false, message: '只有管理員可以新增用戶' };
+  }
+
   const users = getAllUsersLocal();
   
   // 檢查用戶名是否已存在
