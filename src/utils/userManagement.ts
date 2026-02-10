@@ -279,7 +279,7 @@ export async function addUserAsync(username: string, password: string, isAdmin: 
  * 添加新用戶（同步版本，用於向後兼容）
  * 只有管理員可以新增用戶
  */
-export function addUser(username: string, password: string, isAdmin: boolean = false): { success: boolean; message: string } {
+export function addUser(username: string, password: string, isAdminUser: boolean = false): { success: boolean; message: string } {
   // 檢查當前用戶是否為管理員
   const currentUsername = getCurrentUsername();
   if (!currentUsername) {
@@ -311,7 +311,7 @@ export function addUser(username: string, password: string, isAdmin: boolean = f
   const newUser: User = {
     username: username.trim(),
     password: password.trim(),
-    isAdmin,
+    isAdmin: isAdminUser,
   };
 
   users.push(newUser);
