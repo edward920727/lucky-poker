@@ -147,12 +147,18 @@ export default function TournamentDashboard({
       : getAdministrativeFee(entryFee);
     const totalAdministrativeFee = administrativeFeePerPerson * totalBuyInGroups;
     
-    // 第一步：總獎金池 = (單組報名費 - 行政費) × 總組數
-    // 第二步：淨獎池 = 總獎金池 - 單場總提撥金（整場固定一次）
+    // 獲取活動獎金
+    const activityBonus = isCustom && customConfig && customConfig.activityBonus
+      ? customConfig.activityBonus
+      : 0;
+    
+    // 財務資訊的總獎池 = (報名費 - 行政費) × 組數 - 活動獎金（不扣提撥）
+    const totalPrizePool = (entryFee - administrativeFeePerPerson) * totalBuyInGroups - activityBonus;
+    
+    // 獲取提撥金（用於保存，但不影響財務資訊的總獎池計算）
     const totalDeduction = isCustom && customConfig && customConfig.totalDeduction
       ? customConfig.totalDeduction
       : 0;
-    const totalPrizePool = (entryFee - administrativeFeePerPerson) * totalBuyInGroups - totalDeduction;
 
     // 構建賽事名稱，如果設置了場次號碼，添加到名稱後面
     let tournamentName: string = config.name;

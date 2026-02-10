@@ -263,8 +263,8 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
     
     // 第一步：總獎金池 = (單組報名費 - 行政費) × 總組數
     const rawTotalPrizePool = (entryFee - administrativeFeePerPerson) * totalBuyInGroups;
-    // 第二步：淨獎池 = 總獎金池 - 活動獎金 - 單場總提撥金
-    const totalPrizePool = rawTotalPrizePool - activityBonusNum - totalDeduction;
+    // 財務資訊的總獎池 = 總獎金池 - 活動獎金（不扣提撥）
+    const totalPrizePool = rawTotalPrizePool - activityBonusNum;
 
     // 構建更新對象，只包含有效的字段
     const updatedTournament: TournamentRecord = {
@@ -666,17 +666,15 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                           : parseInt(tournament.tournamentType);
                         const administrativeFee = tournament.administrativeFee || 0;
                         const totalGroups = editedPlayers.reduce((sum, p) => sum + p.buyInCount, 0);
-                        // 第一步：總獎金池 = (單組報名費 - 行政費) × 總組數
+                        // 財務資訊的總獎池 = (報名費 - 行政費) × 組數 - 活動獎金（不扣提撥）
                         const totalPrizePool = (entryFee - administrativeFee) * totalGroups;
-                        // 第二步：淨獎池 = 總獎金池 - 活動獎金 - 單場總提撥金
-                        const totalDeduction = parseInt(editedTotalDeduction) || 0;
                         const activityBonus = parseInt(editedActivityBonus) || 0;
-                        const netPool = totalPrizePool - activityBonus - totalDeduction;
-                        return netPool.toLocaleString();
+                        const financialTotalPrizePool = totalPrizePool - activityBonus;
+                        return financialTotalPrizePool.toLocaleString();
                       })()}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      總獎金池 - 活動獎金 - 單場總提撥金
+                      (報名費 - 行政費) × 組數 - 活動獎金
                     </p>
                   </div>
                 </div>
@@ -722,11 +720,24 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                 <div className="bg-poker-gold-900 bg-opacity-50 rounded-xl p-4 border border-poker-gold-700">
                   <p className="text-sm text-gray-400 mb-2">總獎池</p>
                   <p className="text-2xl font-bold text-poker-gold-300">
-                    NT$ {(tournament.totalPrizePool || tournament.totalBuyIn).toLocaleString()}
+                    NT$ {(() => {
+                      const customConfig = tournament.customConfig;
+                      const entryFee = tournament.tournamentType === 'custom' && customConfig
+                        ? (customConfig.entryFee || 0)
+                        : parseInt(tournament.tournamentType);
+                      const administrativeFee = tournament.administrativeFee || 0;
+                      const totalGroups = tournament.totalPlayers || displayPlayers.reduce((sum, p) => sum + p.buyInCount, 0);
+                      const activityBonus = tournament.activityBonus || 
+                        (tournament.tournamentType === 'custom' && customConfig?.activityBonus) || 
+                        0;
+                      // 財務資訊的總獎池 = (報名費 - 行政費) × 組數 - 活動獎金（不扣提撥）
+                      const financialTotalPrizePool = (entryFee - administrativeFee) * totalGroups - activityBonus;
+                      return financialTotalPrizePool.toLocaleString();
+                    })()}
                   </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      (報名費 - 行政費) × 組數 - 活動獎金 - 單場總提撥
-                    </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    (報名費 - 行政費) × 組數 - 活動獎金
+                  </p>
                 </div>
               </div>
             )}

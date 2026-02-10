@@ -50,14 +50,13 @@ export default function QuickEditView({ tournamentId, onBack }: QuickEditViewPro
         getAdministrativeFee(entryFee);
       const totalAdministrativeFee = administrativeFeePerPerson * totalBuyInGroups;
       
-      // 獲取提撥金
-      const totalDeduction = tournament.totalDeduction ||
-        (tournament.tournamentType === 'custom' && tournament.customConfig?.totalDeduction) ||
-        (tournament.tournamentType && getICMRewardStructure(parseInt(tournament.tournamentType))?.totalDeduction) ||
+      // 獲取活動獎金
+      const activityBonus = tournament.activityBonus ||
+        (tournament.tournamentType === 'custom' && tournament.customConfig?.activityBonus) ||
         0;
 
-      // 計算總獎池
-      const totalPrizePool = (entryFee - administrativeFeePerPerson) * totalBuyInGroups - totalDeduction;
+      // 財務資訊的總獎池 = (報名費 - 行政費) × 組數 - 活動獎金（不扣提撥）
+      const totalPrizePool = (entryFee - administrativeFeePerPerson) * totalBuyInGroups - activityBonus;
 
       // 構建更新對象，只包含有效的字段
       const updatedTournament: TournamentRecord = {
