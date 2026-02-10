@@ -55,6 +55,12 @@ export default function QuickEditView({ tournamentId, onBack }: QuickEditViewPro
         (tournament.tournamentType === 'custom' && tournament.customConfig?.activityBonus) ||
         0;
 
+      // 獲取提撥金（用於保存，但不影響財務資訊的總獎池計算）
+      const totalDeduction = tournament.totalDeduction ||
+        (tournament.tournamentType === 'custom' && tournament.customConfig?.totalDeduction) ||
+        (tournament.tournamentType && getICMRewardStructure(parseInt(tournament.tournamentType))?.totalDeduction) ||
+        0;
+
       // 財務資訊的總獎池 = (報名費 - 行政費) × 組數 - 活動獎金（不扣提撥）
       const totalPrizePool = (entryFee - administrativeFeePerPerson) * totalBuyInGroups - activityBonus;
 

@@ -77,7 +77,6 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
   // 所有賽事都使用新的ICM計算邏輯
   // 第一步：總獎金池 = (單組報名費 - 行政費) × 總組數
   const totalPrizePool = (entryFee - deduction) * totalGroups;
-  const poolAfterActivityBonus = totalPrizePool - activityBonus;
   
   // 使用新的ICM計算函數（所有賽事統一使用）
   const calculationResult = calculateICMPrize(
