@@ -18,68 +18,14 @@ export default function QuickEditView({ tournamentId, onBack }: QuickEditViewPro
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
-  // 載入賽事數據的函數（集中處理，比對是否需要更新）
-  const loadTournamentData = useCallback(() => {
+  // 載入賽事數據
+  useEffect(() => {
     const record = getTournamentById(tournamentId);
     if (record) {
-      // 比較玩家列表是否有變化
-      const currentPlayerIds = new Set(record.players?.map(p => p.id) || []);
-      const existingPlayerIds = new Set(players.map(p => p.id));
-      const hasPlayerChange = 
-        currentPlayerIds.size !== existingPlayerIds.size ||
-        [...currentPlayerIds].some(id => !existingPlayerIds.has(id)) ||
-        [...existingPlayerIds].some(id => !currentPlayerIds.has(id));
-      
-      // 如果有變化，更新狀態
-      if (hasPlayerChange || !tournament || tournament.id !== record.id) {
-        setTournament(record);
-        setPlayers(JSON.parse(JSON.stringify(record.players || []))); // 深拷貝
-      } else {
-        // 即使沒有玩家變化，也要更新 tournament 對象（可能其他字段有變化）
-        setTournament(record);
-      }
+      setTournament(record);
+      setPlayers(JSON.parse(JSON.stringify(record.players))); // 深拷貝
     }
-  }, [tournamentId, players, tournament]);
-
-  // 初始載入和監聽數據變化
-  useEffect(() => {
-    // 立即載入一次（使用集中處理函數）
-    loadTournamentData();
-
-    // 監聽 localStorage 變化（跨標籤頁同步）
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'lucky_poker_tournaments' && e.newValue) {
-        // 重新載入數據
-        setTimeout(() => {
-          loadTournamentData();
-        }, 100); // 稍微延遲，確保數據已寫入
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    // 監聽自定義事件（用於同一個標籤頁內的更新）
-    const handleTournamentUpdate = (e: CustomEvent) => {
-      if (e.detail?.tournamentId === tournamentId) {
-        setTimeout(() => {
-          loadTournamentData();
-        }, 100);
-      }
-    };
-
-    window.addEventListener('tournament-updated' as any, handleTournamentUpdate);
-
-    // 定期檢查數據是否有更新（用於同一個標籤頁內的更新）
-    const intervalId = setInterval(() => {
-      loadTournamentData();
-    }, 500); // 每 500ms 檢查一次
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('tournament-updated' as any, handleTournamentUpdate);
-      clearInterval(intervalId);
-    };
-  }, [tournamentId, loadTournamentData]);
+  }, [tournamentId]);
 
   // 計算 entryFee
   const entryFee = useMemo(() => {

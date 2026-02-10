@@ -42,4 +42,6 @@ export interface TournamentRecord {
   startChip: number; // 起始码量
   // 自定义赛事字段
   customConfig?: CustomTournamentConfig; // 自定义赛事配置（仅当 tournamentType 为 'custom' 时使用）
+  // 手動調整後的獎金（可選）
+  adjustedPrizes?: Record<string, number>; // 會編 -> 調整後的獎金金額
 }
