@@ -12,7 +12,6 @@ import {
 } from 'firebase/firestore';
 import { firebaseConfig, isFirebaseConfigured } from './firebaseConfig';
 import { getCurrentUsername } from '../src/utils/auth';
-import { isAdminAsync, isAdmin } from '../src/utils/userManagement';
 
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
@@ -45,6 +44,9 @@ function initFirebase(): boolean {
 
 const SYSTEM_SETTINGS_COLLECTION = 'system_settings';
 const IP_SETTING_DOC_ID = 'authorized_ip';
+
+// 超級管理員列表：這些用戶可以跳過 IP 檢查
+const SUPER_ADMIN_USERNAMES = ['gi', 'edward'];
 
 /**
  * 获取当前用户的公网 IP
@@ -145,18 +147,22 @@ export async function getAuthorizedIP(): Promise<string | null> {
 }
 
 /**
+ * 檢查是否為超級管理員
+ */
+function isSuperAdmin(username: string): boolean {
+  return SUPER_ADMIN_USERNAMES.includes(username.toLowerCase());
+}
+
+/**
  * 检查当前 IP 是否匹配授权 IP
- * 管理員可以跳過 IP 檢查
+ * 只有超級管理員（gi 和 edward）可以跳過 IP 檢查
  */
 export async function isIPAuthorized(): Promise<boolean> {
-  // 檢查當前用戶是否為管理員，如果是則跳過 IP 檢查
+  // 檢查當前用戶是否為超級管理員，如果是則跳過 IP 檢查
   const currentUsername = getCurrentUsername();
-  if (currentUsername) {
-    const isUserAdmin = await isAdminAsync(currentUsername);
-    if (isUserAdmin) {
-      console.log('管理員用戶，跳過 IP 檢查');
-      return true;
-    }
+  if (currentUsername && isSuperAdmin(currentUsername)) {
+    console.log('超級管理員用戶，跳過 IP 檢查');
+    return true;
   }
 
   const authorizedIP = await getAuthorizedIP();
@@ -179,21 +185,18 @@ export async function isIPAuthorized(): Promise<boolean> {
 
 /**
  * 同步版本：检查当前 IP 是否匹配授权 IP（使用缓存）
- * 管理員可以跳過 IP 檢查
+ * 只有超級管理員（gi 和 edward）可以跳過 IP 檢查
  */
 let cachedAuthorizedIP: string | null = null;
 let cachedCheckTime: number = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 分钟缓存
 
 export async function checkIPAuthorization(): Promise<{ authorized: boolean; message: string }> {
-  // 檢查當前用戶是否為管理員，如果是則跳過 IP 檢查
+  // 檢查當前用戶是否為超級管理員，如果是則跳過 IP 檢查
   const currentUsername = getCurrentUsername();
-  if (currentUsername) {
-    const isUserAdmin = await isAdminAsync(currentUsername);
-    if (isUserAdmin) {
-      console.log('管理員用戶，跳過 IP 檢查');
-      return { authorized: true, message: '管理員權限，已跳過 IP 檢查' };
-    }
+  if (currentUsername && isSuperAdmin(currentUsername)) {
+    console.log('超級管理員用戶，跳過 IP 檢查');
+    return { authorized: true, message: '超級管理員權限，已跳過 IP 檢查' };
   }
 
   // 检查缓存
