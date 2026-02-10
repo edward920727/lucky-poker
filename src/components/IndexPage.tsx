@@ -57,7 +57,6 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
     let unsubscribe: (() => void) | null = null;
     try {
       unsubscribe = setupRealtimeSyncForTournaments((tournaments) => {
-        console.log('[實時同步] 收到更新，賽事數量:', tournaments.length);
         setTournaments(tournaments);
         // 保持當前展開狀態，不自動展開新日期
       });
@@ -68,7 +67,6 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
     // 監聽 storage 事件（當本地存儲更新時，用於跨標籤頁同步）
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'lucky_poker_tournaments') {
-        console.log('[本地存儲更新] 檢測到賽事數據變化，重新載入');
         loadTournaments();
       }
     };
@@ -83,7 +81,6 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
         try {
           const currentTournaments = JSON.parse(currentData);
           if (currentTournaments.length !== lastTournamentCount) {
-            console.log('[定期檢查] 檢測到賽事數據變化，重新載入');
             lastTournamentCount = currentTournaments.length;
             loadTournaments();
           }
@@ -118,16 +115,6 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
     const grouped: Record<string, GroupedTournaments> = {};
     const todayKey = getTaiwanTodayDateKey();
     
-    // 調試：顯示今天的日期和所有賽事
-    console.log(`[今日賽事篩選] 今天的日期鍵: "${todayKey}"`);
-    console.log(`[今日賽事篩選] 總共有 ${tournaments.length} 個賽事`);
-    
-    // 顯示所有賽事的日期（前5個）
-    tournaments.slice(0, 5).forEach((t, idx) => {
-      const dk = getDateKey(t.date);
-      console.log(`[今日賽事篩選] 賽事 ${idx + 1}: 日期鍵="${dk}", 完整日期="${t.date}", 名稱="${t.tournamentName}"`);
-    });
-
     tournaments.forEach((tournament) => {
       // 跳過無效的賽事日期
       if (!tournament.date) {
@@ -147,9 +134,6 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
       if (dateKey !== todayKey) {
         return;
       }
-      
-      // 調試：匹配成功
-      console.log(`[今日賽事篩選] ✓ 匹配成功: ${tournament.tournamentName}, 日期鍵=${dateKey}, 原始日期=${tournament.date}`);
       
       if (!grouped[dateKey]) {
         try {

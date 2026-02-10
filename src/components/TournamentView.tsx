@@ -351,7 +351,6 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
       const playersCopy = players.length > 0 
         ? JSON.parse(JSON.stringify(players)) // 深拷貝
         : [];
-      console.log('進入編輯模式，players:', playersCopy);
       setEditedPlayers(playersCopy);
       setIsEditMode(true);
     } catch (error) {
