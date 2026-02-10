@@ -301,7 +301,6 @@ export function calculateICMPrize(
   const remainder = netPoolForVerification - totalDistributed;
 
   let adjustmentAmount = 0;
-  let adjustedPlayerIndex = -1;
   
   if (finalPlayerPrizes.length > 0 && Math.abs(remainder) > 0.01) {
     adjustmentAmount = remainder;
@@ -312,10 +311,17 @@ export function calculateICMPrize(
       .map((p, index) => ({ ...p, index, roundedLoss: p.roundedLoss || 0 }))
       .filter(p => p.prizeAmount > 0 && p.roundedLoss > 0);
     
+    let adjustedPlayerIndex: number;
+    
     if (eligiblePlayers.length > 0) {
       // 按捨去尾數從大到小排序
       eligiblePlayers.sort((a, b) => b.roundedLoss - a.roundedLoss);
       adjustedPlayerIndex = eligiblePlayers[0].index;
+      
+      // 確保索引有效
+      if (adjustedPlayerIndex === undefined || adjustedPlayerIndex < 0 || adjustedPlayerIndex >= finalPlayerPrizes.length) {
+        adjustedPlayerIndex = 0;
+      }
       
       console.log('🔍 差額調整：找到捨去尾數最多的玩家:', {
         玩家: finalPlayerPrizes[adjustedPlayerIndex].memberId,
@@ -326,6 +332,11 @@ export function calculateICMPrize(
       // 如果沒有捨去尾數的玩家，則調整到第一名
       adjustedPlayerIndex = 0;
       console.log('🔍 差額調整：沒有捨去尾數的玩家，調整到第一名');
+    }
+    
+    // 確保索引有效
+    if (adjustedPlayerIndex < 0 || adjustedPlayerIndex >= finalPlayerPrizes.length) {
+      adjustedPlayerIndex = 0;
     }
     
     // 將差額加到選中的玩家
