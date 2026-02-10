@@ -180,7 +180,7 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm mt-3">
                 <div>
-                  <span className="opacity-90">前三名提撥獎金:</span>
+                  <span className="opacity-90">提撥獎金（= 前三名提撥獎金總和）:</span>
                   <span className="font-semibold ml-2">NT$ {prizeCalculation.topThreeTotal.toLocaleString()}</span>
                   {prizeCalculation.topThreePrizes.length > 0 && (
                     <div className="text-xs opacity-75 mt-1">
@@ -190,6 +190,15 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
                           第{p.rank}名: NT$ {p.amount.toLocaleString()} ({p.percentage}%)
                         </span>
                       ))}
+                    </div>
+                  )}
+                  {/* 驗證顯示：確保分配總額等於設定的提撥金額 */}
+                  {prizeCalculation.topThreePrizes.length > 0 && (
+                    <div className="text-xs text-green-300 mt-1">
+                      ✓ 驗證：提撥獎金 = 前三名提撥總額 = {prizeCalculation.topThreePrizes.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
+                      {Math.abs(prizeCalculation.topThreeTotal - prizeCalculation.topThreePrizes.reduce((sum, p) => sum + p.amount, 0)) > 0.01 && (
+                        <span className="text-red-300"> (警告：與設定值不一致！)</span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -218,7 +227,7 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
                 2. 淨獎池 = 總獎金池 - 活動獎金
               </p>
               <p className="text-sm mb-1">
-                3. 提撥獎金從淨獎池扣除，按設定比例分配給前三名
+                3. 提撥獎金（= 前三名提撥獎金總和）從淨獎池扣除，按設定比例分配給前三名
               </p>
               <p className="text-sm mb-1">
                 4. 最終分配獎池 = 淨獎池 - 提撥獎金

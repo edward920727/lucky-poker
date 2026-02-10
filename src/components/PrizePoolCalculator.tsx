@@ -43,11 +43,13 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
 
   // 當賽事類型變化時，如果不是手動模式，自動更新報名費、行政費、提撥金和獲得比例
   useEffect(() => {
+    // ⚠️ 重要：只有在不是手動模式時才自動更新，避免覆蓋用戶輸入的值
     if (!isManualEntryFee && tournamentType) {
       if (isCustom && customConfig) {
         setEntryFee(customConfig.entryFee);
         setDeduction(customConfig.administrativeFee);
         setActivityBonus(customConfig.activityBonus || 0);
+        // ⚠️ 只有在不是手動模式時才自動設置 totalDeduction
         if (!isManualTotalDeduction) {
           setTotalDeduction(customConfig.totalDeduction || 0);
         }
@@ -60,6 +62,7 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
         setDeduction(autoDeduction);
         // 標準賽事預設不額外抽活動獎金（如需可手動輸入）
         setActivityBonus(0);
+        // ⚠️ 只有在不是手動模式時才自動設置 totalDeduction
         if (!isManualTotalDeduction) {
           const icmStructure = getICMRewardStructure(newEntryFee);
           if (icmStructure) {
@@ -70,6 +73,7 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
             setTopThreeSplit([50, 30, 20]);
           }
         }
+        // ⚠️ 注意：如果 isManualTotalDeduction 為 true，保持用戶輸入的值不變，不會被覆蓋
       }
     }
   }, [tournamentType, customConfig, isManualEntryFee, isManualTotalDeduction, isCustom]);
@@ -77,7 +81,21 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
   // 所有賽事都使用新的ICM計算邏輯
   // 第一步：總獎金池 = (單組報名費 - 行政費) × 總組數
   const totalPrizePool = (entryFee - deduction) * totalGroups;
-  const poolAfterActivityBonus = totalPrizePool - activityBonus;
+  
+  // 調試：確認傳入計算函數的值
+  console.log('🔍 PrizePoolCalculator 傳入計算函數的值:', {
+    entryFee,
+    administrativeFee: deduction,
+    totalGroups,
+    totalDeduction,
+    activityBonus,
+    topThreeSplit,
+    isManualTotalDeduction,
+    玩家數量: players.length,
+    玩家籌碼總和: players.reduce((sum, p) => sum + p.currentChips, 0),
+    驗證: 'totalDeduction 必須是用戶輸入的值，不是預設值',
+    警告: '如果 totalDeduction 顯示錯誤（如500而不是300），請檢查 isManualTotalDeduction 是否正確設置',
+  });
   
   // 使用新的ICM計算函數（所有賽事統一使用）
   const calculationResult = calculateICMPrize(
@@ -85,7 +103,7 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
       entryFee,
       administrativeFee: deduction,
       totalGroups,
-      totalDeduction,
+      totalDeduction, // ⚠️ 必須是用戶輸入的值
       activityBonus,
       topThreeSplit,
     },
@@ -435,7 +453,7 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">3️⃣</span>
-                    <span className="text-lg md:text-xl font-bold text-white">提撥獎金</span>
+                    <span className="text-lg md:text-xl font-bold text-white">提撥獎金（= 前三名提撥獎金總和）</span>
                   </div>
                   <span className="text-2xl md:text-3xl font-black text-white">
                     - NT$ {totalDeduction.toLocaleString()}
@@ -443,6 +461,8 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
                 </div>
                 <div className="text-sm text-white/80 mt-1">
                   從淨獎池扣除，按 {topThreeSplit[0]}% / {topThreeSplit[1]}% / {topThreeSplit[2]}% 分配給前三名
+                  <br />
+                  <span className="text-yellow-300 font-semibold">✓ 提撥獎金 = 前三名提撥獎金總和 = NT$ {totalDeduction.toLocaleString()}</span>
                 </div>
               </div>
             )}
@@ -512,22 +532,30 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
               </div>
               {/* 顯示總和驗證 */}
               <div className="mt-4 pt-4 border-t border-gray-600 bg-gray-700/50 rounded-lg p-3">
+                <div className="bg-green-900/30 border border-green-600/50 rounded-lg p-3 mb-3">
+                  <div className="text-center">
+                    <div className="text-sm text-green-300 mb-1">驗證等式</div>
+                    <div className="text-lg font-black text-green-400">
+                      提撥獎金 = 前三名提撥獎金總和
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-300 font-medium">提撥獎金：</span>
+                  <span className="text-lg font-black text-white">
+                    NT$ {totalDeduction.toLocaleString()}
+                  </span>
+                </div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-gray-300 font-medium">前三名提撥總額：</span>
                   <span className="text-lg font-black text-poker-gold-400">
                     NT$ {topThreePrizes.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
                   </span>
                 </div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-300 font-medium">設定的總提撥額：</span>
-                  <span className="text-lg font-black text-white">
-                    NT$ {totalDeduction.toLocaleString()}
-                  </span>
-                </div>
                 {Math.abs(topThreePrizes.reduce((sum, p) => sum + p.amount, 0) - totalDeduction) < 0.01 ? (
                   <div className="flex items-center gap-2 text-sm text-green-400 font-semibold mt-2 pt-2 border-t border-gray-600">
                     <span>✓</span>
-                    <span>分配總額等於設定的總提撥額</span>
+                    <span>提撥獎金 = 前三名提撥獎金總和（驗證通過）</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 text-sm text-orange-400 font-semibold mt-2 pt-2 border-t border-gray-600">
@@ -566,7 +594,7 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
                 <div className="flex items-start gap-2">
                   <span className="font-bold text-blue-400 min-w-[60px]">第三步：</span>
                   <span className="text-gray-300">
-                    提撥獎金 = <strong className="text-purple-400">NT$ {totalDeduction.toLocaleString()}</strong>（從淨獎池扣除）
+                    提撥獎金（= 前三名提撥獎金總和）= <strong className="text-purple-400">NT$ {totalDeduction.toLocaleString()}</strong>（從淨獎池扣除）
                   </span>
                 </div>
               )}
@@ -574,7 +602,7 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
                 <div className="flex items-start gap-2">
                   <span className="font-bold text-blue-400 min-w-[60px]">第四步：</span>
                   <span className="text-gray-300">
-                    提撥分配 = 將提撥金 {totalDeduction.toLocaleString()} 按 <strong className="text-yellow-400">{topThreeSplit[0]}% / {topThreeSplit[1]}% / {topThreeSplit[2]}%</strong> 分配給前三名
+                    提撥分配 = 將提撥獎金 <strong className="text-purple-400">NT$ {totalDeduction.toLocaleString()}</strong>（等於前三名提撥獎金總和）按 <strong className="text-yellow-400">{topThreeSplit[0]}% / {topThreeSplit[1]}% / {topThreeSplit[2]}%</strong> 分配給前三名
                   </span>
                 </div>
               )}
