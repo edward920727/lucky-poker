@@ -11,6 +11,7 @@ import { calculateICMPrize, PrizeCalculationResult } from '../../utils/prizeCalc
 import { getICMRewardStructure } from '../../constants/icmRewardConfig';
 import { getAdministrativeFee } from '../../utils/administrativeFeeConfig';
 import { formatTaiwanDate, formatTaiwanTime } from '../utils/dateUtils';
+import { checkIPAuthorization } from '../../utils/systemSecurity';
 
 const paymentMethodLabels: Record<PaymentMethod, string> = {
   cash: '現金',
@@ -249,8 +250,15 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
       });
   }, [adjustedPrizes, prizeCalculation, isAdjustingPrizes]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!tournament) return;
+
+    // 檢查 IP 授權
+    const ipCheck = await checkIPAuthorization();
+    if (!ipCheck.authorized) {
+      alert(ipCheck.message || '非授權網路，禁止修改');
+      return;
+    }
 
     // 計算新的提撥金和獎池
     const totalDeductionNum = editedTotalDeduction ? parseInt(editedTotalDeduction) : 0;
@@ -352,9 +360,19 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
     }
   };
 
-  const handleUpdatePlayer = (id: string, updates: Partial<Player>) => {
+  const handleUpdatePlayer = async (id: string, updates: Partial<Player>) => {
     const player = editedPlayers.find(p => p.id === id);
     if (!player) return;
+
+    // 如果修改筹码或买入次数，检查 IP 授权
+    if ((updates.currentChips !== undefined && updates.currentChips !== player.currentChips) ||
+        (updates.buyInCount !== undefined && updates.buyInCount !== player.buyInCount)) {
+      const ipCheck = await checkIPAuthorization();
+      if (!ipCheck.authorized) {
+        alert(ipCheck.message || '非授權網路，禁止修改');
+        return;
+      }
+    }
 
     // 记录操作日志
     if (updates.currentChips !== undefined && updates.currentChips !== player.currentChips) {
@@ -606,9 +624,6 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                     min="0"
                     value={editedTotalDeduction}
                     onChange={(e) => setEditedTotalDeduction(e.target.value)}
-                    onWheel={(e) => {
-                      e.currentTarget.blur();
-                    }}
                     className="w-full px-4 py-3 bg-gray-700 border-2 border-poker-gold-600 rounded-xl text-white text-lg focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
                     placeholder="輸入單場總提撥金"
                   />
@@ -627,9 +642,6 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                     min="0"
                     value={editedActivityBonus}
                     onChange={(e) => setEditedActivityBonus(e.target.value)}
-                    onWheel={(e) => {
-                      e.currentTarget.blur();
-                    }}
                     className="w-full px-4 py-3 bg-gray-700 border-2 border-poker-gold-600 rounded-xl text-white text-lg focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
                     placeholder="輸入活動獎金"
                   />
@@ -841,9 +853,6 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                             ...prev,
                             [playerPrize.memberId]: Math.max(0, value)
                           }));
-                        }}
-                        onWheel={(e) => {
-                          e.currentTarget.blur();
                         }}
                         className={`w-32 px-3 py-2 rounded-lg text-white text-right focus:outline-none focus:ring-2 transition-all ${
                           isChanged

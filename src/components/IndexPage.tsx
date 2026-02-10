@@ -4,12 +4,14 @@ import { getAllTournaments, deleteTournament, updateTournament, setupRealtimeSyn
 import AuditLogPanel from './AuditLogPanel';
 import MemberPaymentQuery from './MemberPaymentQuery';
 import { getTaiwanTodayDateKey, getDateKey, formatTaiwanDate, getTaiwanDateTime, formatTaiwanTime } from '../utils/dateUtils';
+import { checkIPAuthorization } from '../../utils/systemSecurity';
 
 interface IndexPageProps {
   onCreateNew: () => void;
   onViewTournament: (id: string) => void;
   onLogout?: () => void;
   onOpenUserManagement?: () => void;
+  onOpenSystemSecurity?: () => void;
   onViewAllTournaments?: () => void;
   onQuickEdit?: (tournamentId: string) => void;
 }
@@ -23,7 +25,7 @@ interface GroupedTournaments {
   totalDeduction: number; // 该日期总提拨金额（如果有记录）
 }
 
-export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onOpenUserManagement, onViewAllTournaments }: IndexPageProps) {
+export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onOpenUserManagement, onOpenSystemSecurity, onViewAllTournaments }: IndexPageProps) {
   const [tournaments, setTournaments] = useState<TournamentRecord[]>([]);
   const [showAuditLog, setShowAuditLog] = useState(false);
   const [showMemberQuery, setShowMemberQuery] = useState(false);
@@ -258,8 +260,21 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
     }));
   };
 
-  const handleChipBlur = (playerId: string) => {
+  const handleChipBlur = async (playerId: string) => {
     if (!quickEditTournament) return;
+    
+    // 檢查 IP 授權
+    const ipCheck = await checkIPAuthorization();
+    if (!ipCheck.authorized) {
+      alert(ipCheck.message || '非授權網路，禁止修改');
+      // 恢復原值
+      const originalChips = quickEditTournament.players.find(p => p.id === playerId)?.currentChips || 0;
+      setChipInputValues(prev => ({
+        ...prev,
+        [playerId]: originalChips.toString(),
+      }));
+      return;
+    }
     
     const inputValue = chipInputValues[playerId] || '';
     const newChips = inputValue === '' ? 0 : parseFloat(inputValue) || 0;
@@ -344,7 +359,7 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
           )}
 
           {/* 右側：登出和帳號管理按鈕 */}
-          {(onLogout || onOpenUserManagement) && (
+          {(onLogout || onOpenUserManagement || onOpenSystemSecurity) && (
             <div className="flex gap-3">
             {onOpenUserManagement && (
               <button
@@ -354,6 +369,16 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
                 <span>👥</span>
                 <span className="hidden sm:inline">帳號管理</span>
                 <span className="sm:hidden">管理</span>
+              </button>
+            )}
+            {onOpenSystemSecurity && (
+              <button
+                onClick={onOpenSystemSecurity}
+                className="px-4 md:px-6 py-2 md:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm md:text-base font-semibold transition-all duration-200 border-2 border-blue-500 shadow-lg flex items-center gap-2"
+              >
+                <span>🔒</span>
+                <span className="hidden sm:inline">系統安全</span>
+                <span className="sm:hidden">安全</span>
               </button>
             )}
               {onLogout && (

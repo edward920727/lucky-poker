@@ -6,6 +6,7 @@ import { calculateICMPrize, PrizeCalculationResult } from '../../utils/prizeCalc
 import { getICMRewardStructure, getAdministrativeFee } from '../../constants/icmRewardConfig';
 import { TOURNAMENT_TYPES } from '../../constants/pokerConfig';
 import QuickEditPlayerList from './QuickEditPlayerList';
+import { checkIPAuthorization } from '../../utils/systemSecurity';
 
 interface QuickEditViewProps {
   tournamentId: string;
@@ -38,8 +39,17 @@ export default function QuickEditView({ tournamentId, onBack }: QuickEditViewPro
 
   // 自動保存函數（防抖）
   const autoSave = useCallback(
-    (updatedPlayers: Player[]) => {
+    async (updatedPlayers: Player[]) => {
       if (!tournament) return;
+
+      // 檢查 IP 授權
+      const ipCheck = await checkIPAuthorization();
+      if (!ipCheck.authorized) {
+        alert(ipCheck.message || '非授權網路，禁止修改');
+        // 恢復原值
+        setPlayers(JSON.parse(JSON.stringify(tournament.players)));
+        return;
+      }
 
       // 計算新的財務數據
       const totalBuyInGroups = updatedPlayers.reduce((sum, p) => sum + p.buyInCount, 0);

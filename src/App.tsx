@@ -7,13 +7,14 @@ import TournamentSettlement from './components/TournamentSettlement';
 import UserManagement from './components/UserManagement';
 import AllTournamentsView from './components/AllTournamentsView';
 import QuickEditView from './components/QuickEditView';
+import SystemSecuritySettings from './components/SystemSecuritySettings';
 import Login from './components/Login';
 import { TournamentType, Player } from '../constants/pokerConfig';
 import { CustomTournamentConfig } from '../types/tournament';
 import { isAuthenticated, logout, getCurrentUsername } from './utils/auth';
 import { isAdmin } from './utils/userManagement';
 
-type AppView = 'index' | 'selector' | 'dashboard' | 'view' | 'userManagement' | 'allTournaments' | 'settlement' | 'quickEdit';
+type AppView = 'index' | 'selector' | 'dashboard' | 'view' | 'userManagement' | 'systemSecurity' | 'allTournaments' | 'settlement' | 'quickEdit';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -115,6 +116,14 @@ function App() {
     setCurrentView('index');
   };
 
+  const handleOpenSystemSecurity = () => {
+    setCurrentView('systemSecurity');
+  };
+
+  const handleBackFromSystemSecurity = () => {
+    setCurrentView('index');
+  };
+
   const handleViewAllTournaments = () => {
     setCurrentView('allTournaments');
   };
@@ -166,6 +175,7 @@ function App() {
         onViewTournament={handleViewTournament}
         onLogout={handleLogout}
         onOpenUserManagement={userIsAdmin ? handleOpenUserManagement : undefined}
+        onOpenSystemSecurity={userIsAdmin ? handleOpenSystemSecurity : undefined}
         onViewAllTournaments={handleViewAllTournaments}
         onQuickEdit={handleQuickEdit}
       />
@@ -192,6 +202,19 @@ function App() {
     }
     
     return <UserManagement onBack={handleBackFromUserManagement} />;
+  }
+
+  if (currentView === 'systemSecurity') {
+    const currentUsername = getCurrentUsername();
+    const userIsAdmin = currentUsername ? isAdmin(currentUsername) : false;
+    
+    // 如果不是管理員，強制返回首頁
+    if (!userIsAdmin) {
+      setCurrentView('index');
+      return null;
+    }
+    
+    return <SystemSecuritySettings onBack={handleBackFromSystemSecurity} />;
   }
 
   if (currentView === 'selector') {

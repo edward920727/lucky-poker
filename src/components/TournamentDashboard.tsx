@@ -12,6 +12,7 @@ import { getTaiwanDateTime, getTaiwanTodayDateKey, getDateKey } from '../utils/d
 import { logAction } from '../../utils/auditLog';
 import { PrizeCalculationResult } from '../../utils/prizeCalculator';
 import { getAdministrativeFee } from '../../utils/administrativeFeeConfig';
+import { checkIPAuthorization } from '../../utils/systemSecurity';
 
 interface TournamentDashboardProps {
   tournamentType: TournamentType;
@@ -97,9 +98,19 @@ export default function TournamentDashboard({
     logAction('create', memberId);
   };
 
-  const handleUpdatePlayer = (id: string, updates: Partial<Player>) => {
+  const handleUpdatePlayer = async (id: string, updates: Partial<Player>) => {
     const player = players.find(p => p.id === id);
     if (!player) return;
+
+    // 如果修改筹码或买入次数，检查 IP 授权
+    if ((updates.currentChips !== undefined && updates.currentChips !== player.currentChips) ||
+        (updates.buyInCount !== undefined && updates.buyInCount !== player.buyInCount)) {
+      const ipCheck = await checkIPAuthorization();
+      if (!ipCheck.authorized) {
+        alert(ipCheck.message || '非授權網路，禁止修改');
+        return;
+      }
+    }
 
     // 记录操作日志
     if (updates.currentChips !== undefined && updates.currentChips !== player.currentChips) {
@@ -125,7 +136,14 @@ export default function TournamentDashboard({
     onPlayersChange(players.filter(p => p.id !== id));
   };
 
-  const handleSaveTournament = () => {
+  const handleSaveTournament = async () => {
+    // 檢查 IP 授權
+    const ipCheck = await checkIPAuthorization();
+    if (!ipCheck.authorized) {
+      alert(ipCheck.message || '非授權網路，禁止修改');
+      return;
+    }
+
     if (players.length === 0) {
       alert('請至少新增一名玩家');
       return;
