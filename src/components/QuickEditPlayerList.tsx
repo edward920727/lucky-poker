@@ -119,6 +119,11 @@ export default function QuickEditPlayerList({
                 {/* 會編 */}
                 <div className="font-mono font-bold text-lg text-poker-gold-300 flex-shrink-0">
                   會編 {player.memberId}
+                  {player.seat && (
+                    <span className="ml-2 px-2 py-0.5 bg-blue-600 rounded text-xs font-semibold text-white">
+                      座位 {player.seat}
+                    </span>
+                  )}
                 </div>
 
                 {/* 買入次數 */}

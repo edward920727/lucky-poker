@@ -204,6 +204,7 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
             <tr className="bg-gray-800 text-white">
               <th className="border border-gray-700 py-3 px-4 text-left">名次</th>
               <th className="border border-gray-700 py-3 px-4 text-left">會編</th>
+              <th className="border border-gray-700 py-3 px-4 text-left">座位號</th>
               <th className="border border-gray-700 py-3 px-4 text-left">買入次數</th>
               <th className="border border-gray-700 py-3 px-4 text-left">支付方式</th>
               <th className="border border-gray-700 py-3 px-4 text-left">折扣券</th>
@@ -242,6 +243,7 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
                 <tr key={player.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                   <td className="border border-gray-300 py-3 px-4 text-gray-900">{displayRank}</td>
                   <td className="border border-gray-300 py-3 px-4 font-mono text-lg text-gray-900">{player.memberId}</td>
+                  <td className="border border-gray-300 py-3 px-4 text-gray-900">{player.seat || '-'}</td>
                   <td className="border border-gray-300 py-3 px-4 text-gray-900">{player.buyInCount}</td>
                   <td className="border border-gray-300 py-3 px-4 text-gray-900">
                     {paymentMethodLabels[player.paymentMethod]}

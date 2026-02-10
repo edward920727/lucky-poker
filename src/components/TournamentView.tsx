@@ -917,7 +917,14 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                       : 'border-gray-600'
                   }`}
                 >
-                  <div className="font-mono font-bold text-lg text-poker-gold-300 mb-2">{player.memberId}</div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="font-mono font-bold text-lg text-poker-gold-300">{player.memberId}</div>
+                    {player.seat && (
+                      <span className="px-2 py-1 bg-blue-600 rounded text-xs font-semibold text-white">
+                        座位 {player.seat}
+                      </span>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                     <div>
                       <span className="text-gray-400">買入次數：</span>
@@ -944,6 +951,7 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                 <thead>
                   <tr className="border-b border-gray-700">
                     <th className="text-left py-3 px-4">會編</th>
+                    <th className="text-left py-3 px-4">座位號</th>
                     <th className="text-left py-3 px-4">買入次數</th>
                     <th className="text-left py-3 px-4">當前碼量</th>
                     <th className="text-left py-3 px-4">支付方式</th>
@@ -958,6 +966,15 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
                       }`}
                     >
                       <td className="py-4 px-4 font-mono font-semibold text-xl">{player.memberId}</td>
+                      <td className="py-4 px-4">
+                        {player.seat ? (
+                          <span className="px-3 py-1 bg-blue-600 rounded text-sm font-semibold text-white">
+                            {player.seat}
+                          </span>
+                        ) : (
+                          <span className="text-gray-500 text-sm">未設定</span>
+                        )}
+                      </td>
                       <td className="py-4 px-4">{player.buyInCount}</td>
                       <td className="py-4 px-4">{player.currentChips.toLocaleString()}</td>
                       <td className="py-4 px-4">

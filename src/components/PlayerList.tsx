@@ -132,6 +132,25 @@ export default function PlayerList({
             
             <div className="space-y-3">
               <div className="flex items-center justify-between">
+                <span className="text-gray-400 text-sm">座位號</span>
+                <select
+                  value={player.seat || ''}
+                  onChange={(e) => {
+                    const seat = e.target.value === '' ? undefined : parseInt(e.target.value);
+                    onUpdatePlayer(player.id, { seat });
+                  }}
+                  className="px-3 py-2 bg-gray-700 rounded-lg text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
+                >
+                  <option value="">未設定</option>
+                  {Array.from({ length: 10 }, (_, i) => i + 1).map((seatNum) => (
+                    <option key={seatNum} value={seatNum} className="bg-gray-800">
+                      {seatNum}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="flex items-center justify-between">
                 <span className="text-gray-400 text-sm">買入次數</span>
                 <div className="flex items-center gap-2">
                   <button
@@ -183,6 +202,7 @@ export default function PlayerList({
           <thead>
             <tr className="border-b-2 border-poker-gold-600 border-opacity-50 bg-poker-gold-900 bg-opacity-20">
               <th className="text-left py-4 px-4 font-display font-bold text-poker-gold-300">會編</th>
+              <th className="text-left py-4 px-4 font-display font-bold text-poker-gold-300">座位號</th>
               <th className="text-left py-4 px-4 font-display font-bold text-poker-gold-300">買入次數</th>
               <th className="text-left py-4 px-4 font-display font-bold text-poker-gold-300">當前碼量</th>
               <th className="text-left py-4 px-4 font-display font-bold text-poker-gold-300">支付方式</th>
@@ -198,6 +218,23 @@ export default function PlayerList({
                 }`}
               >
                 <td className="py-4 px-4 font-mono font-semibold text-xl">{player.memberId}</td>
+                <td className="py-4 px-4">
+                  <select
+                    value={player.seat || ''}
+                    onChange={(e) => {
+                      const seat = e.target.value === '' ? undefined : parseInt(e.target.value);
+                      onUpdatePlayer(player.id, { seat });
+                    }}
+                    className="px-3 py-1 bg-gray-700 rounded text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-poker-gold-500"
+                  >
+                    <option value="">未設定</option>
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((seatNum) => (
+                      <option key={seatNum} value={seatNum} className="bg-gray-800">
+                        {seatNum}
+                      </option>
+                    ))}
+                  </select>
+                </td>
                 <td className="py-4 px-4">
                   <div className="flex items-center gap-2">
                     <button

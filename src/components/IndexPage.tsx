@@ -662,6 +662,11 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
                         <span className="font-mono font-bold text-lg text-poker-gold-300">
                           會編 {player.memberId}
                         </span>
+                        {player.seat && (
+                          <span className="ml-2 px-2 py-0.5 bg-blue-600 rounded text-xs font-semibold text-white">
+                            座位 {player.seat}
+                          </span>
+                        )}
                         {(player as any).name && (
                           <span className="ml-2 text-sm text-gray-400">{(player as any).name}</span>
                         )}
