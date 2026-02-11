@@ -24,14 +24,45 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
     if (!exportRef.current) return;
 
     try {
+      // 等待字体加载完成
+      await document.fonts.ready;
+      
+      // 确保元素可见（临时移动到可见位置）
+      const originalPosition = exportRef.current.style.position;
+      const originalLeft = exportRef.current.style.left;
+      const originalTop = exportRef.current.style.top;
+      const originalZIndex = exportRef.current.style.zIndex;
+      
+      // 临时显示元素以确保样式正确渲染
+      exportRef.current.style.position = 'absolute';
+      exportRef.current.style.left = '0';
+      exportRef.current.style.top = '0';
+      exportRef.current.style.zIndex = '9999';
+      
+      // 等待一小段时间确保样式应用
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const canvas = await html2canvas(exportRef.current, {
         backgroundColor: '#111827',
         scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        width: exportRef.current.scrollWidth,
+        height: exportRef.current.scrollHeight,
+        windowWidth: exportRef.current.scrollWidth,
+        windowHeight: exportRef.current.scrollHeight,
       });
+
+      // 恢复原始位置
+      exportRef.current.style.position = originalPosition;
+      exportRef.current.style.left = originalLeft;
+      exportRef.current.style.top = originalTop;
+      exportRef.current.style.zIndex = originalZIndex;
 
       const link = document.createElement('a');
       link.download = `${config.name}_結算結存表_${getTaiwanTodayDateKey()}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = canvas.toDataURL('image/png', 1.0);
       link.click();
     } catch (error) {
       console.error('導出失敗:', error);
@@ -57,40 +88,62 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
       </button>
 
       {/* 隱藏的導出內容 */}
-      <div ref={exportRef} className="fixed -left-[9999px] bg-gray-900 text-white p-8 w-[800px]">
-        <div className="text-center mb-6">
-          <h1 className="text-4xl font-bold mb-2">
-            {tournamentName || config.name}
+      <div 
+        ref={exportRef} 
+        className="fixed -left-[9999px] bg-gray-900 text-white p-8 w-[800px]"
+        style={{
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif",
+          backgroundColor: '#111827',
+          color: '#ffffff',
+        }}
+      >
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <h1 style={{ fontSize: '2.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+            {tournamentName || config.name} Settlement Statement
           </h1>
-          <p className="text-xl text-gray-400">
-            結算結存表 | {formatTaiwanDate(getTaiwanDateTime(), { year: 'numeric', month: 'long', day: 'numeric' })}
+          <p style={{ fontSize: '1.25rem', color: '#9ca3af' }}>
+            {formatTaiwanDate(getTaiwanDateTime(), { year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-blue-600 p-4 rounded-lg text-center">
-            <div className="text-sm opacity-90 mb-1">買入組數</div>
-            <div className="text-3xl font-bold">{totalBuyInGroups}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div style={{ backgroundColor: '#2563eb', padding: '1rem', borderRadius: '0.5rem', textAlign: 'center', color: '#ffffff' }}>
+            <div style={{ fontSize: '0.875rem', opacity: 0.9, marginBottom: '0.25rem', color: '#ffffff' }}>買入組數</div>
+            <div style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#ffffff' }}>{totalBuyInGroups}</div>
           </div>
-          <div className="bg-purple-600 p-4 rounded-lg text-center">
-            <div className="text-sm opacity-90 mb-1">理論總碼量</div>
-            <div className="text-3xl font-bold">{expectedTotalChips.toLocaleString()}</div>
+          <div style={{ backgroundColor: '#9333ea', padding: '1rem', borderRadius: '0.5rem', textAlign: 'center', color: '#ffffff' }}>
+            <div style={{ fontSize: '0.875rem', opacity: 0.9, marginBottom: '0.25rem', color: '#ffffff' }}>理論總碼量</div>
+            <div style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#ffffff' }}>{expectedTotalChips.toLocaleString()}</div>
           </div>
-          <div className={`p-4 rounded-lg text-center ${isBalanced ? 'bg-green-600' : 'bg-red-600'}`}>
-            <div className="text-sm opacity-90 mb-1">實際總碼量</div>
-            <div className="text-3xl font-bold">{actualTotalChips.toLocaleString()}</div>
+          <div style={{ 
+            backgroundColor: isBalanced ? '#16a34a' : '#dc2626', 
+            padding: '1rem', 
+            borderRadius: '0.5rem', 
+            textAlign: 'center',
+            color: '#ffffff'
+          }}>
+            <div style={{ fontSize: '0.875rem', opacity: 0.9, marginBottom: '0.25rem', color: '#ffffff' }}>實際總碼量</div>
+            <div style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#ffffff' }}>{actualTotalChips.toLocaleString()}</div>
           </div>
         </div>
 
-        <table className="w-full border-collapse mb-6">
+        <table 
+          className="w-full border-collapse mb-6"
+          style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            marginBottom: '1.5rem',
+          }}
+        >
           <thead>
-            <tr className="bg-gray-800">
-              <th className="border border-gray-700 py-3 px-4 text-left">名次</th>
-              <th className="border border-gray-700 py-3 px-4 text-left">會編</th>
-              <th className="border border-gray-700 py-3 px-4 text-left">買入次數</th>
-              <th className="border border-gray-700 py-3 px-4 text-left">支付方式</th>
-              <th className="border border-gray-700 py-3 px-4 text-left">當前碼量</th>
-              <th className="border border-gray-700 py-3 px-4 text-right">獎金金額</th>
+            <tr style={{ backgroundColor: '#1f2937' }}>
+              <th style={{ border: '1px solid #374151', padding: '0.75rem 1rem', textAlign: 'left', color: '#ffffff' }}>名次</th>
+              <th style={{ border: '1px solid #374151', padding: '0.75rem 1rem', textAlign: 'left', color: '#ffffff' }}>會編</th>
+              <th style={{ border: '1px solid #374151', padding: '0.75rem 1rem', textAlign: 'left', color: '#ffffff' }}>買入次數</th>
+              <th style={{ border: '1px solid #374151', padding: '0.75rem 1rem', textAlign: 'left', color: '#ffffff' }}>支付方式</th>
+              <th style={{ border: '1px solid #374151', padding: '0.75rem 1rem', textAlign: 'left', color: '#ffffff' }}>折扣券</th>
+              <th style={{ border: '1px solid #374151', padding: '0.75rem 1rem', textAlign: 'left', color: '#ffffff' }}>當前碼量</th>
+              <th style={{ border: '1px solid #374151', padding: '0.75rem 1rem', textAlign: 'right', color: '#ffffff' }}>獎金金額</th>
             </tr>
           </thead>
           <tbody>
@@ -115,24 +168,40 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
                 displayPrize = playerPrize ? playerPrize.prizeAmount : 0;
               }
               
+              const paymentMethodStyle = player.paymentMethod === 'cash' 
+                ? { backgroundColor: '#16a34a', color: '#ffffff' }
+                : player.paymentMethod === 'transfer'
+                ? { backgroundColor: '#2563eb', color: '#ffffff' }
+                : { backgroundColor: '#dc2626', color: '#ffffff' };
+              
               return (
-                <tr key={player.id} className={index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-700'}>
-                  <td className="border border-gray-700 py-3 px-4">
-                    <span className="font-bold text-yellow-400">第 {displayRank} 名</span>
+                <tr 
+                  key={player.id} 
+                  style={{ backgroundColor: index % 2 === 0 ? '#1f2937' : '#374151' }}
+                >
+                  <td style={{ border: '1px solid #374151', padding: '0.75rem 1rem', color: '#ffffff' }}>
+                    {displayRank}
                   </td>
-                  <td className="border border-gray-700 py-3 px-4 font-mono text-xl">{player.memberId}</td>
-                  <td className="border border-gray-700 py-3 px-4">{player.buyInCount}</td>
-                  <td className="border border-gray-700 py-3 px-4">
-                    <span className={`px-2 py-1 rounded text-sm font-semibold ${
-                      player.paymentMethod === 'cash' ? 'bg-green-600 text-white' :
-                      player.paymentMethod === 'transfer' ? 'bg-blue-600 text-white' :
-                      'bg-red-600 text-white'
-                    }`}>
+                  <td style={{ border: '1px solid #374151', padding: '0.75rem 1rem', fontFamily: 'monospace', fontSize: '1.25rem', color: '#ffffff' }}>
+                    {player.memberId}
+                  </td>
+                  <td style={{ border: '1px solid #374151', padding: '0.75rem 1rem', color: '#ffffff' }}>{player.buyInCount}</td>
+                  <td style={{ border: '1px solid #374151', padding: '0.75rem 1rem' }}>
+                    <span style={{
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '0.25rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      ...paymentMethodStyle
+                    }}>
                       {paymentMethodLabels[player.paymentMethod]}
                     </span>
                   </td>
-                  <td className="border border-gray-700 py-3 px-4">{player.currentChips.toLocaleString()}</td>
-                  <td className="border border-gray-700 py-3 px-4 text-right font-semibold text-green-400">
+                  <td style={{ border: '1px solid #374151', padding: '0.75rem 1rem', color: '#ffffff' }}>
+                    {player.couponCode ? player.couponCode : '-'}
+                  </td>
+                  <td style={{ border: '1px solid #374151', padding: '0.75rem 1rem', color: '#ffffff' }}>{player.currentChips.toLocaleString()}</td>
+                  <td style={{ border: '1px solid #374151', padding: '0.75rem 1rem', textAlign: 'right', fontWeight: '600', color: '#4ade80' }}>
                     {displayPrize !== null ? `NT$ ${displayPrize.toLocaleString()}` : '-'}
                   </td>
                 </tr>
@@ -143,48 +212,82 @@ export default function ExportButton({ players, config, prizeCalculation, tourna
 
         {/* 獎金分配摘要 */}
         {prizeCalculation && prizeCalculation.playerPrizes.length > 0 && prizeCalculation.totalPrizePool > 0 && (
-          <div className="mt-6">
-            <h2 className="text-2xl font-bold mb-4 text-center">獎金分配摘要</h2>
-            <div className="bg-yellow-600 bg-opacity-20 p-4 rounded-lg mb-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-lg font-semibold">總獎池</span>
-                <span className="text-2xl font-bold">NT$ {prizeCalculation.totalPrizePool.toLocaleString()}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm mt-3">
-                <div>
-                  <span className="opacity-90">前三名提撥獎金:</span>
-                  <span className="font-semibold ml-2">NT$ {prizeCalculation.topThreeTotal.toLocaleString()}</span>
-                </div>
-                <div>
-                  <span className="opacity-90">剩餘獎池（按籌碼分配）:</span>
-                  <span className="font-semibold ml-2">NT$ {prizeCalculation.remainingPrizePool.toLocaleString()}</span>
-                </div>
-              </div>
-              <div className="text-sm opacity-90 mt-2">
-                總分配金額: NT$ {prizeCalculation.totalDistributed.toLocaleString()}
-                {Math.abs(prizeCalculation.adjustmentAmount) >= 0.01 && (
-                  <span className="ml-2">
-                    (差額 {prizeCalculation.adjustmentAmount > 0 ? '+' : ''}{prizeCalculation.adjustmentAmount.toLocaleString()} 已調整至第一名)
-                  </span>
-                )}
+          <div style={{ marginTop: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', textAlign: 'center', color: '#ffffff' }}>獎金分配摘要</h2>
+            
+            {/* 總獎池 */}
+            <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <span style={{ fontSize: '1.125rem', fontWeight: '600', color: '#ffffff' }}>總獎池</span>
+                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ffffff' }}>NT$ {prizeCalculation.totalPrizePool.toLocaleString()}</span>
               </div>
             </div>
-            <div className="bg-blue-600 bg-opacity-20 p-3 rounded-lg mb-4">
-              <p className="text-sm mb-2">
-                <strong>分配規則：</strong>
-              </p>
-              <p className="text-sm mb-1">
-                1. 從總獎池中提撥前三名獎金（按設定百分比）
-              </p>
-              <p className="text-sm mb-1">
-                2. 剩餘獎池按籌碼占比分配給所有玩家（包括前三名）
-              </p>
-              <p className="text-sm">
-                3. 前三名最終獎金 = 按籌碼占比分配的部分 + 提撥獎金
-              </p>
-              <p className="text-xs text-gray-300 mt-2">
-                • 所有獎金均四捨五入至百位數
-              </p>
+
+            {/* 淨獎池 */}
+            <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <span style={{ fontSize: '1.125rem', fontWeight: '600', color: '#ffffff' }}>淨獎池</span>
+                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ffffff' }}>NT$ {(prizeCalculation.netPool ?? (prizeCalculation.totalPrizePool - (prizeCalculation.activityBonus ?? 0))).toLocaleString()}</span>
+              </div>
+              <div style={{ fontSize: '0.875rem', color: '#9ca3af', marginTop: '0.5rem' }}>
+                (總獎池 - 活動獎金)
+              </div>
+            </div>
+
+            {/* 所有玩家獎金總和 */}
+            <div style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <span style={{ fontSize: '1.125rem', fontWeight: '600', color: '#ffffff' }}>所有玩家獎金總和</span>
+                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ffffff' }}>NT$ {prizeCalculation.totalDistributed.toLocaleString()}</span>
+              </div>
+              <div style={{ fontSize: '0.875rem', color: '#22c55e', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span>✓</span>
+                <span>等於淨獎池(總獎池-活動獎金)</span>
+              </div>
+            </div>
+
+            {/* 提撥獎金 */}
+            <div style={{ backgroundColor: 'rgba(168, 85, 247, 0.1)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <span style={{ fontSize: '1.125rem', fontWeight: '600', color: '#ffffff' }}>提撥獎金 (=前三名提撥獎金總和)</span>
+                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ffffff' }}>NT$ {prizeCalculation.topThreeTotal.toLocaleString()}</span>
+              </div>
+              {prizeCalculation.topThreePrizes.length > 0 && (
+                <div style={{ fontSize: '0.875rem', marginTop: '0.5rem', color: '#ffffff' }}>
+                  {prizeCalculation.topThreePrizes.map((prize, idx) => (
+                    <div key={idx} style={{ marginTop: '0.25rem' }}>
+                      {prize.rank}名: NT$ {prize.amount.toLocaleString()} ({Math.round(prize.percentage)}%)
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ fontSize: '0.875rem', color: '#22c55e', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span>✓</span>
+                <span>驗證:提撥獎金=前三名提撥總額={prizeCalculation.topThreeTotal.toLocaleString()}</span>
+              </div>
+            </div>
+
+            {/* 最終分配獎池 */}
+            <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <span style={{ fontSize: '1.125rem', fontWeight: '600', color: '#ffffff' }}>最終分配獎池(按籌碼分配)</span>
+                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ffffff' }}>NT$ {prizeCalculation.remainingPrizePool.toLocaleString()}</span>
+              </div>
+              <div style={{ fontSize: '0.875rem', color: '#9ca3af', marginTop: '0.5rem' }}>
+                (淨獎池 - 提撥獎金)
+              </div>
+            </div>
+
+            {/* ICM 分配規則 */}
+            <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '0.75rem', color: '#ffffff' }}>ICM 分配規則</h3>
+              <div style={{ fontSize: '0.875rem', lineHeight: '1.6', color: '#ffffff' }}>
+                <p style={{ marginBottom: '0.5rem' }}>1. 從總獎池中提撥前三名獎金（按設定百分比）</p>
+                <p style={{ marginBottom: '0.5rem' }}>2. 剩餘獎池按籌碼占比分配給所有玩家（包括前三名）</p>
+                <p style={{ marginBottom: '0.5rem' }}>3. 前三名最終獎金 = 按籌碼占比分配的部分 + 提撥獎金</p>
+                <p style={{ marginBottom: '0.5rem' }}>4. 所有獎金均四捨五入至百位數</p>
+                <p>5. 活動獎金從總獎池中扣除，不參與玩家分配</p>
+              </div>
             </div>
           </div>
         )}
