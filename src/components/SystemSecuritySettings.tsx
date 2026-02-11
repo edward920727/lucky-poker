@@ -77,7 +77,12 @@ export default function SystemSecuritySettings({ onBack }: SystemSecuritySetting
       if (result.success) {
         setSuccess(result.message);
       } else {
-        setError(result.message);
+        // 显示详细错误信息
+        let errorMsg = result.message;
+        if (result.details) {
+          errorMsg += `\n\n${result.details}`;
+        }
+        setError(errorMsg);
       }
     } catch (error) {
       console.error('保存 IP 失敗:', error);
@@ -122,9 +127,36 @@ export default function SystemSecuritySettings({ onBack }: SystemSecuritySetting
 
         {/* 錯誤和成功訊息 */}
         {error && (
-          <div className="mb-4 bg-red-900 bg-opacity-50 border-2 border-red-600 rounded-lg p-3 flex items-center gap-2">
-            <span className="text-xl">⚠️</span>
-            <span className="text-red-200 text-sm font-semibold">{error}</span>
+          <div className="mb-4 bg-red-900 bg-opacity-50 border-2 border-red-600 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <span className="text-xl">⚠️</span>
+              <div className="flex-1">
+                <div className="text-red-200 text-sm font-semibold mb-2 whitespace-pre-line">
+                  {error}
+                </div>
+                {error.includes('Firebase') && (
+                  <div className="mt-3 pt-3 border-t border-red-700">
+                    <p className="text-red-300 text-xs font-medium mb-2">配置步驟：</p>
+                    <ol className="text-red-200 text-xs space-y-1 list-decimal list-inside">
+                      <li>在項目根目錄創建 <code className="bg-red-800 px-1 rounded">.env</code> 文件</li>
+                      <li>從 Firebase Console 獲取配置信息</li>
+                      <li>在 <code className="bg-red-800 px-1 rounded">.env</code> 文件中填入以下環境變量：</li>
+                    </ol>
+                    <div className="mt-2 p-2 bg-red-950 bg-opacity-50 rounded text-xs font-mono text-red-200">
+                      <div>VITE_FIREBASE_API_KEY=your-api-key</div>
+                      <div>VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com</div>
+                      <div>VITE_FIREBASE_PROJECT_ID=your-project-id</div>
+                      <div>VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com</div>
+                      <div>VITE_FIREBASE_MESSAGING_SENDER_ID=123456789</div>
+                      <div>VITE_FIREBASE_APP_ID=your-app-id</div>
+                    </div>
+                    <p className="text-red-300 text-xs mt-2">
+                      詳細說明請參考 <code className="bg-red-800 px-1 rounded">FIREBASE_SETUP.md</code> 文件
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
         {success && (

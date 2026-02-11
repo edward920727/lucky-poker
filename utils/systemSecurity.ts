@@ -10,17 +10,25 @@ import {
   getDoc, 
   setDoc
 } from 'firebase/firestore';
-import { firebaseConfig, isFirebaseConfigured } from './firebaseConfig';
+import { firebaseConfig, isFirebaseConfigured, getMissingFirebaseConfig } from './firebaseConfig';
 import { getCurrentUsername } from '../src/utils/auth';
 
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
 
 // 初始化 Firebase
-function initFirebase(): boolean {
+function initFirebase(): { success: boolean; error?: string; details?: string } {
   if (!isFirebaseConfigured()) {
-    console.warn('Firebase 未配置，將使用本地存儲');
-    return false;
+    const missingFields = getMissingFirebaseConfig();
+    const errorMsg = missingFields.length > 0
+      ? `Firebase 配置不完整，缺少以下環境變量：${missingFields.join(', ')}`
+      : 'Firebase 未配置';
+    console.warn(errorMsg);
+    return { 
+      success: false, 
+      error: errorMsg,
+      details: '請在項目根目錄創建 .env 文件並配置 Firebase 環境變量。詳細說明請參考 FIREBASE_SETUP.md'
+    };
   }
 
   try {
@@ -28,17 +36,22 @@ function initFirebase(): boolean {
       app = initializeApp(firebaseConfig);
       db = getFirestore(app);
     }
-    return true;
+    return { success: true };
   } catch (error: any) {
     const errorMessage = error?.message || '';
     if (errorMessage.includes('already exists') || errorMessage.includes('duplicate')) {
       if (!db && app) {
         db = getFirestore(app);
       }
-      return true;
+      return { success: true };
     }
-    console.warn('Firebase 初始化遇到問題:', error?.code || error?.message || error);
-    return false;
+    const errorDetails = `Firebase 初始化失敗: ${error?.code || error?.message || '未知錯誤'}`;
+    console.warn(errorDetails, error);
+    return { 
+      success: false, 
+      error: 'Firebase 初始化失敗',
+      details: errorDetails
+    };
   }
 }
 
@@ -93,7 +106,7 @@ export async function getCurrentIP(): Promise<string | null> {
 /**
  * 保存授权 IP 到 Firebase
  */
-export async function saveAuthorizedIP(ip: string): Promise<{ success: boolean; message: string }> {
+export async function saveAuthorizedIP(ip: string): Promise<{ success: boolean; message: string; details?: string }> {
   if (!ip || !ip.trim()) {
     return { success: false, message: 'IP 地址不能为空' };
   }
@@ -104,8 +117,13 @@ export async function saveAuthorizedIP(ip: string): Promise<{ success: boolean; 
     return { success: false, message: 'IP 地址格式不正确' };
   }
 
-  if (!initFirebase() || !db) {
-    return { success: false, message: 'Firebase 未配置或初始化失败' };
+  const initResult = initFirebase();
+  if (!initResult.success || !db) {
+    return { 
+      success: false, 
+      message: initResult.error || 'Firebase 未配置或初始化失败',
+      details: initResult.details
+    };
   }
 
   try {
@@ -118,7 +136,23 @@ export async function saveAuthorizedIP(ip: string): Promise<{ success: boolean; 
     return { success: true, message: 'IP 地址已成功保存' };
   } catch (error: any) {
     console.error('保存 IP 失败:', error);
-    return { success: false, message: `保存失败: ${error?.message || '未知错误'}` };
+    const errorCode = error?.code || '';
+    let errorMessage = `保存失败: ${error?.message || '未知错误'}`;
+    let errorDetails = '';
+    
+    // 提供更详细的错误信息
+    if (errorCode === 'permission-denied') {
+      errorMessage = 'Firebase 權限不足';
+      errorDetails = '請在 Firebase Console 中設置 Firestore 安全規則，允許寫入 system_settings 集合。';
+    } else if (errorCode === 'unavailable') {
+      errorMessage = 'Firebase 服務暫時不可用';
+      errorDetails = '請檢查網路連接或稍後再試。';
+    } else if (errorCode === 'unauthenticated') {
+      errorMessage = 'Firebase 認證失敗';
+      errorDetails = '請檢查 Firebase 配置是否正確。';
+    }
+    
+    return { success: false, message: errorMessage, details: errorDetails || error?.message };
   }
 }
 
@@ -126,7 +160,8 @@ export async function saveAuthorizedIP(ip: string): Promise<{ success: boolean; 
  * 从 Firebase 获取授权 IP
  */
 export async function getAuthorizedIP(): Promise<string | null> {
-  if (!initFirebase() || !db) {
+  const initResult = initFirebase();
+  if (!initResult.success || !db) {
     return null;
   }
 
