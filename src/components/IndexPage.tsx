@@ -336,10 +336,12 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
           {onViewAllTournaments && (
             <button
               onClick={onViewAllTournaments}
-              className="px-4 md:px-6 py-2 md:py-3 bg-white hover:bg-gray-100 text-black rounded-xl text-sm md:text-base font-semibold transition-all duration-200 border-2 border-white shadow-lg flex items-center gap-2"
+              className="group relative px-4 md:px-6 py-2 md:py-3 bg-white/10 backdrop-blur-md hover:bg-white/15 text-white rounded-xl text-sm md:text-base font-semibold transition-all duration-200 border border-white/30 hover:border-white/50 shadow-[0_4px_12px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.4),0_3px_6px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.3)] hover:-translate-y-0.5 flex items-center gap-2 overflow-hidden"
             >
-              <span>📋</span>
-              <span>所有賽事記錄</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transform -skew-x-12 group-hover:translate-x-full transition-all duration-700"></div>
+              <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-t-xl"></div>
+              <span className="relative z-10">📋</span>
+              <span className="relative z-10">所有賽事記錄</span>
             </button>
           )}
 
@@ -349,30 +351,36 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
             {onOpenUserManagement && (
               <button
                 onClick={onOpenUserManagement}
-                className="px-4 md:px-6 py-2 md:py-3 bg-poker-gold-600 hover:bg-poker-gold-700 text-white rounded-xl text-sm md:text-base font-semibold transition-all duration-200 border-2 border-poker-gold-500 shadow-lg flex items-center gap-2"
+                className="group relative px-4 md:px-6 py-2 md:py-3 bg-white/10 backdrop-blur-md hover:bg-white/15 text-white rounded-xl text-sm md:text-base font-semibold transition-all duration-200 border border-white/30 hover:border-white/50 shadow-[0_4px_12px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.4),0_3px_6px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.3)] hover:-translate-y-0.5 flex items-center gap-2 overflow-hidden"
               >
-                <span>👥</span>
-                <span className="hidden sm:inline">帳號管理</span>
-                <span className="sm:hidden">管理</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transform -skew-x-12 group-hover:translate-x-full transition-all duration-700"></div>
+                <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-t-xl"></div>
+                <span className="relative z-10">👥</span>
+                <span className="relative z-10 hidden sm:inline">帳號管理</span>
+                <span className="relative z-10 sm:hidden">管理</span>
               </button>
             )}
             {onOpenSystemSecurity && (
               <button
                 onClick={onOpenSystemSecurity}
-                className="px-4 md:px-6 py-2 md:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm md:text-base font-semibold transition-all duration-200 border-2 border-blue-500 shadow-lg flex items-center gap-2"
+                className="group relative px-4 md:px-6 py-2 md:py-3 bg-white/10 backdrop-blur-md hover:bg-white/15 text-white rounded-xl text-sm md:text-base font-semibold transition-all duration-200 border border-white/30 hover:border-white/50 shadow-[0_4px_12px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.4),0_3px_6px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.3)] hover:-translate-y-0.5 flex items-center gap-2 overflow-hidden"
               >
-                <span>🔒</span>
-                <span className="hidden sm:inline">系統安全</span>
-                <span className="sm:hidden">安全</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transform -skew-x-12 group-hover:translate-x-full transition-all duration-700"></div>
+                <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-t-xl"></div>
+                <span className="relative z-10">🔒</span>
+                <span className="relative z-10 hidden sm:inline">系統安全</span>
+                <span className="relative z-10 sm:hidden">安全</span>
               </button>
             )}
               {onLogout && (
                 <button
                   onClick={onLogout}
-                  className="px-4 md:px-6 py-2 md:py-3 bg-white hover:bg-gray-100 rounded-xl text-sm md:text-base font-semibold text-black transition-all duration-200 border-2 border-white shadow-lg flex items-center gap-2"
+                  className="group relative px-4 md:px-6 py-2 md:py-3 bg-white/10 backdrop-blur-md hover:bg-white/15 text-white rounded-xl text-sm md:text-base font-semibold transition-all duration-200 border border-white/30 hover:border-white/50 shadow-[0_4px_12px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.4),0_3px_6px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.3)] hover:-translate-y-0.5 flex items-center gap-2 overflow-hidden"
                 >
-                  <span>🚪</span>
-                  <span>登出</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transform -skew-x-12 group-hover:translate-x-full transition-all duration-700"></div>
+                  <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-t-xl"></div>
+                  <span className="relative z-10">🚪</span>
+                  <span className="relative z-10">登出</span>
                 </button>
               )}
             </div>
@@ -402,9 +410,10 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
         <div className="mb-8 flex flex-col md:flex-row justify-center items-center gap-4 flex-wrap">
           <button
             onClick={onCreateNew}
-            className="group relative bg-white hover:bg-gray-100 text-black font-bold py-6 px-12 rounded-2xl text-2xl md:text-3xl shadow-2xl transform hover:scale-105 transition-all duration-300 flex items-center gap-4 overflow-hidden border-2 border-white"
+            className="group relative bg-white/10 backdrop-blur-md hover:bg-white/15 text-white font-bold py-6 px-12 rounded-2xl text-2xl md:text-3xl shadow-[0_8px_24px_rgba(0,0,0,0.4),0_4px_8px_rgba(0,0,0,0.3),inset_0_2px_0_rgba(255,255,255,0.2),inset_0_-2px_0_rgba(0,0,0,0.1)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.5),0_6px_12px_rgba(0,0,0,0.4),inset_0_2px_0_rgba(255,255,255,0.3),inset_0_-2px_0_rgba(0,0,0,0.15)] transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 flex items-center gap-4 overflow-hidden border border-white/30 hover:border-white/50"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-200 to-transparent opacity-0 group-hover:opacity-30 transform -skew-x-12 group-hover:translate-x-full transition-all duration-1000"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover:opacity-100 transform -skew-x-12 group-hover:translate-x-full transition-all duration-1000"></div>
+            <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/25 to-transparent rounded-t-2xl"></div>
             <span className="text-4xl relative z-10">🃏</span>
             <span className="relative z-10">創建新賽事</span>
           </button>
@@ -413,9 +422,10 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
           {filteredGroups.length > 0 && filteredGroups[0].tournaments.length > 0 && (
             <button
               onClick={handleQuickEditClick}
-              className="md:hidden group relative bg-gradient-to-r from-poker-gold-600 to-poker-gold-700 hover:from-poker-gold-700 hover:to-poker-gold-800 text-white font-bold py-6 px-12 rounded-2xl text-2xl shadow-2xl transform hover:scale-105 transition-all duration-300 flex items-center gap-4 overflow-hidden border-2 border-poker-gold-500"
+              className="md:hidden group relative bg-white/10 backdrop-blur-md hover:bg-white/15 text-white font-bold py-6 px-12 rounded-2xl text-2xl shadow-[0_8px_24px_rgba(0,0,0,0.4),0_4px_8px_rgba(0,0,0,0.3),inset_0_2px_0_rgba(255,255,255,0.2),inset_0_-2px_0_rgba(0,0,0,0.1)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.5),0_6px_12px_rgba(0,0,0,0.4),inset_0_2px_0_rgba(255,255,255,0.3),inset_0_-2px_0_rgba(0,0,0,0.15)] transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 flex items-center gap-4 overflow-hidden border border-white/30 hover:border-white/50"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20 transform -skew-x-12 group-hover:translate-x-full transition-all duration-1000"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover:opacity-100 transform -skew-x-12 group-hover:translate-x-full transition-all duration-1000"></div>
+              <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/25 to-transparent rounded-t-2xl"></div>
               <span className="text-4xl relative z-10">⚡</span>
               <span className="relative z-10">快速更碼</span>
             </button>
@@ -423,10 +433,12 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
           
           <button
             onClick={() => setShowMemberQuery(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-xl transition-all duration-200 border-2 border-blue-500 flex items-center gap-2"
+            className="group relative bg-white/10 backdrop-blur-md hover:bg-white/15 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-[0_4px_12px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.4),0_3px_6px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.3)] hover:-translate-y-0.5 transition-all duration-200 border border-white/30 hover:border-white/50 flex items-center gap-2 overflow-hidden"
           >
-            <span>🔍</span>
-            <span>會員查詢</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transform -skew-x-12 group-hover:translate-x-full transition-all duration-700"></div>
+            <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-t-xl"></div>
+            <span className="relative z-10">🔍</span>
+            <span className="relative z-10">會員查詢</span>
           </button>
           
           {onOpenDailyReport && (
@@ -435,18 +447,22 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
                 e.preventDefault();
                 onOpenDailyReport();
               }}
-              className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-xl transition-all duration-200 border-2 border-purple-500 flex items-center gap-2"
+              className="group relative bg-white/10 backdrop-blur-md hover:bg-white/15 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-[0_4px_12px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.4),0_3px_6px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.3)] hover:-translate-y-0.5 transition-all duration-200 border border-white/30 hover:border-white/50 flex items-center gap-2 overflow-hidden"
             >
-              <span>📊</span>
-              <span>每日報表</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transform -skew-x-12 group-hover:translate-x-full transition-all duration-700"></div>
+              <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-t-xl"></div>
+              <span className="relative z-10">📊</span>
+              <span className="relative z-10">每日報表</span>
             </button>
           )}
           <button
             onClick={() => setShowAuditLog(true)}
-            className="bg-white hover:bg-gray-100 text-black font-semibold py-4 px-8 rounded-xl text-lg shadow-xl transition-all duration-200 border-2 border-white flex items-center gap-2"
+            className="group relative bg-white/10 backdrop-blur-md hover:bg-white/15 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-[0_4px_12px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.4),0_3px_6px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.3)] hover:-translate-y-0.5 transition-all duration-200 border border-white/30 hover:border-white/50 flex items-center gap-2 overflow-hidden"
           >
-            <span>📋</span>
-            <span>操作日誌</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transform -skew-x-12 group-hover:translate-x-full transition-all duration-700"></div>
+            <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-t-xl"></div>
+            <span className="relative z-10">📋</span>
+            <span className="relative z-10">操作日誌</span>
           </button>
         </div>
 

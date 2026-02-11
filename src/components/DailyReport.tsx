@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { TournamentRecord } from '../../types/tournament';
 import { DailyReport, ExpenseRecord, ExpenseType, ActivityBonusStats, TournamentTypeStats } from '../../types/dailyReport';
 import { getAllTournaments } from '../../utils/storage';
-import { getDailyReport, saveDailyReport, getAllDailyReports } from '../../utils/dailyReportStorage';
+import { getDailyReport, saveDailyReport } from '../../utils/dailyReportStorage';
 import { getAdministrativeFee } from '../../utils/administrativeFeeConfig';
 import { TOURNAMENT_TYPES } from '../../constants/pokerConfig';
 import { getTaiwanTodayDateKey, formatTaiwanDate } from '../utils/dateUtils';
@@ -24,7 +24,6 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
   console.log('DailyReportView 组件已加载', { onBack, selectedDate });
   
   const [report, setReport] = useState<DailyReport | null>(null);
-  const [tournaments, setTournaments] = useState<TournamentRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedReportDate, setSelectedReportDate] = useState<string>(() => {
     // 确保 selectedDate 是字符串类型
@@ -74,7 +73,7 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
       const groups = tournament.players.reduce((sum, p) => sum + p.buyInCount, 0);
       
       // 获取赛事类型和名称
-      let typeKey = tournament.tournamentType;
+      let typeKey: string = tournament.tournamentType;
       let typeName = tournament.tournamentName;
       
       if (tournament.tournamentType === 'custom' && tournament.customConfig) {
@@ -166,7 +165,6 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
         const tournamentDate = t.date.split('T')[0];
         return tournamentDate === dateKey;
       });
-      setTournaments(dayTournaments);
 
       // 加载或创建报表
       let existingReport: DailyReport | null = null;
@@ -257,7 +255,6 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
           const tournamentDate = t.date.split('T')[0];
           return tournamentDate === dateKey;
         });
-        setTournaments(dayTournaments);
         
         // 重新计算报表数据
         const updatedReport = calculateReportFromTournaments(dayTournaments, dateKey);

@@ -1,4 +1,4 @@
-import { DailyReport, ExpenseRecord } from '../types/dailyReport';
+import { DailyReport } from '../types/dailyReport';
 import { 
   collection, 
   doc, 
@@ -6,7 +6,6 @@ import {
   setDoc, 
   getDocs, 
   query, 
-  where,
   orderBy,
   deleteDoc,
   Timestamp
