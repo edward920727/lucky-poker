@@ -7,17 +7,26 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
+        manualChunks: (id) => {
           // 将 React 相关代码分离
-          'react-vendor': ['react', 'react-dom'],
-          // 将 Firebase 相关代码分离
-          'firebase-vendor': ['firebase'],
+          if (id.includes('react') || id.includes('react-dom')) {
+            return 'react-vendor';
+          }
+          // 将 Firebase 相关代码分离（使用动态检测）
+          if (id.includes('firebase')) {
+            return 'firebase-vendor';
+          }
           // 将其他大型库分离
-          'utils-vendor': ['html2canvas'],
+          if (id.includes('html2canvas')) {
+            return 'utils-vendor';
+          }
         },
       },
     },
     // 增加 chunk 大小警告限制（可选）
     chunkSizeWarningLimit: 1000,
+  },
+  optimizeDeps: {
+    include: ['firebase'],
   },
 })
