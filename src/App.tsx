@@ -8,13 +8,14 @@ import UserManagement from './components/UserManagement';
 import AllTournamentsView from './components/AllTournamentsView';
 import QuickEditView from './components/QuickEditView';
 import SystemSecuritySettings from './components/SystemSecuritySettings';
+import DailyReport from './components/DailyReport';
 import Login from './components/Login';
 import { TournamentType, Player } from '../constants/pokerConfig';
 import { CustomTournamentConfig } from '../types/tournament';
 import { isAuthenticated, logout, getCurrentUsername } from './utils/auth';
 import { isAdmin } from './utils/userManagement';
 
-type AppView = 'index' | 'selector' | 'dashboard' | 'view' | 'userManagement' | 'systemSecurity' | 'allTournaments' | 'settlement' | 'quickEdit';
+type AppView = 'index' | 'selector' | 'dashboard' | 'view' | 'userManagement' | 'systemSecurity' | 'allTournaments' | 'settlement' | 'quickEdit' | 'dailyReport';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -24,6 +25,7 @@ function App() {
   const [customConfig, setCustomConfig] = useState<CustomTournamentConfig | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [viewingTournamentId, setViewingTournamentId] = useState<string | null>(null);
+  const [selectedReportDate, setSelectedReportDate] = useState<string | undefined>(undefined);
 
   // 檢查登入狀態
   useEffect(() => {
@@ -147,6 +149,23 @@ function App() {
     setViewingTournamentId(null);
   };
 
+  const handleOpenDailyReport = (date?: string) => {
+    console.log('handleOpenDailyReport 被调用', date, typeof date);
+    // 确保 date 是字符串类型
+    if (date && typeof date === 'string') {
+      setSelectedReportDate(date);
+    } else {
+      setSelectedReportDate(undefined);
+    }
+    setCurrentView('dailyReport');
+    console.log('currentView 设置为 dailyReport');
+  };
+
+  const handleBackFromDailyReport = () => {
+    setSelectedReportDate(undefined);
+    setCurrentView('index');
+  };
+
   // 如果正在檢查登入狀態，顯示載入畫面
   if (isCheckingAuth) {
     return (
@@ -178,6 +197,7 @@ function App() {
         onOpenSystemSecurity={userIsAdmin ? handleOpenSystemSecurity : undefined}
         onViewAllTournaments={handleViewAllTournaments}
         onQuickEdit={handleQuickEdit}
+        onOpenDailyReport={handleOpenDailyReport}
       />
     );
   }
@@ -187,6 +207,7 @@ function App() {
       <AllTournamentsView
         onBack={handleBackFromAllTournaments}
         onViewTournament={handleViewTournament}
+        onOpenDailyReport={handleOpenDailyReport}
       />
     );
   }
@@ -257,6 +278,16 @@ function App() {
       <QuickEditView
         tournamentId={viewingTournamentId}
         onBack={handleBackFromQuickEdit}
+      />
+    );
+  }
+
+  if (currentView === 'dailyReport') {
+    console.log('渲染 DailyReport 组件', selectedReportDate);
+    return (
+      <DailyReport
+        onBack={handleBackFromDailyReport}
+        selectedDate={selectedReportDate}
       />
     );
   }

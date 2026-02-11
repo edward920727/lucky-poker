@@ -6,6 +6,7 @@ import { getDateKey, formatTaiwanDate, getTaiwanTodayDateKey, formatTaiwanTime }
 interface AllTournamentsViewProps {
   onBack: () => void;
   onViewTournament: (id: string) => void;
+  onOpenDailyReport?: (date?: string) => void;
 }
 
 interface GroupedTournaments {
@@ -17,7 +18,7 @@ interface GroupedTournaments {
   totalDeduction: number; // 该日期总提拨金额（如果有记录）
 }
 
-export default function AllTournamentsView({ onBack, onViewTournament }: AllTournamentsViewProps) {
+export default function AllTournamentsView({ onBack, onViewTournament, onOpenDailyReport }: AllTournamentsViewProps) {
   const [tournaments, setTournaments] = useState<TournamentRecord[]>([]);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
   const [startDate, setStartDate] = useState<string>('');
@@ -473,6 +474,22 @@ export default function AllTournamentsView({ onBack, onViewTournament }: AllTour
                         </div>
                       </div>
                       <div className="flex items-center gap-3 relative z-10">
+                        {onOpenDailyReport && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              if (typeof onOpenDailyReport === 'function') {
+                                onOpenDailyReport(group.date);
+                              }
+                            }}
+                            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl border-2 border-purple-500 flex items-center gap-2"
+                            title="查看該日報表"
+                          >
+                            <span>📊</span>
+                            <span>查看報表</span>
+                          </button>
+                        )}
                         <span className="text-poker-gold-300 text-sm font-semibold">
                           {isExpanded ? '收起' : '展開'}
                         </span>

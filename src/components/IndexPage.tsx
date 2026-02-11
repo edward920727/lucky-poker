@@ -14,6 +14,7 @@ interface IndexPageProps {
   onOpenSystemSecurity?: () => void;
   onViewAllTournaments?: () => void;
   onQuickEdit?: (tournamentId: string) => void;
+  onOpenDailyReport?: () => void;
 }
 
 interface GroupedTournaments {
@@ -25,7 +26,7 @@ interface GroupedTournaments {
   totalDeduction: number; // 该日期总提拨金额（如果有记录）
 }
 
-export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onOpenUserManagement, onOpenSystemSecurity, onViewAllTournaments }: IndexPageProps) {
+export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onOpenUserManagement, onOpenSystemSecurity, onViewAllTournaments, onOpenDailyReport }: IndexPageProps) {
   const [tournaments, setTournaments] = useState<TournamentRecord[]>([]);
   const [showAuditLog, setShowAuditLog] = useState(false);
   const [showMemberQuery, setShowMemberQuery] = useState(false);
@@ -427,6 +428,19 @@ export default function IndexPage({ onCreateNew, onViewTournament, onLogout, onO
             <span>🔍</span>
             <span>會員查詢</span>
           </button>
+          
+          {onOpenDailyReport && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                onOpenDailyReport();
+              }}
+              className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-xl transition-all duration-200 border-2 border-purple-500 flex items-center gap-2"
+            >
+              <span>📊</span>
+              <span>每日報表</span>
+            </button>
+          )}
           <button
             onClick={() => setShowAuditLog(true)}
             className="bg-white hover:bg-gray-100 text-black font-semibold py-4 px-8 rounded-xl text-lg shadow-xl transition-all duration-200 border-2 border-white flex items-center gap-2"
