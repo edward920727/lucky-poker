@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>德州撲克賽事管理系統 - 維護報價單</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Microsoft JhengHei', '微軟正黑體', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #d4af37;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #1a1a1a;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .header .subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+        .info-box {
+            background: #f9f9f9;
+            padding: 20px;
+            border-left: 4px solid #d4af37;
+            margin-bottom: 30px;
+        }
+        .info-box p {
+            margin: 5px 0;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .section h2 {
+            color: #d4af37;
+            font-size: 22px;
+            border-bottom: 2px solid #d4af37;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .section h3 {
+            color: #333;
+            font-size: 18px;
+            margin: 20px 0 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        table th {
+            background: #d4af37;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        table tr:hover {
+            background: #f0f0f0;
+        }
+        .price-highlight {
+            color: #d4af37;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .feature-list {
+            list-style: none;
+            padding-left: 0;
+        }
+        .feature-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+        .feature-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #22c55e;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .recommended {
+            background: #fff9e6;
+            border: 2px solid #d4af37;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .recommended::before {
+            content: "⭐ 推薦方案";
+            display: block;
+            color: #d4af37;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .contact-box {
+            background: #1a1a1a;
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 30px;
+        }
+        .contact-box h3 {
+            color: #d4af37;
+            margin-bottom: 15px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #666;
+            font-size: 14px;
+        }
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>德州撲克賽事管理系統</h1>
+            <div class="subtitle">網站維護報價單</div>
+            <div style="margin-top: 15px; color: #666;">
+                <strong>報價日期：</strong>2024年12月 | 
+                <strong>系統版本：</strong>v1.0.0 | 
+                <strong>有效期：</strong>30天
+            </div>
+        </div>
+
+        <div class="info-box">
+            <p><strong>系統名稱：</strong>Lucky Poker 德州撲克賽事管理系統</p>
+            <p><strong>技術架構：</strong>React 18 + TypeScript + Firebase + Vercel</p>
+            <p><strong>主要功能：</strong>賽事管理、玩家管理、獎金計算、結算管理、數據統計、用戶管理</p>
+        </div>
+
+        <div class="section">
+            <h2>💰 維護方案報價</h2>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>方案</th>
+                        <th>月費</th>
+                        <th>主要服務內容</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>基礎維護</strong></td>
+                        <td class="price-highlight">NT$ 8,000</td>
+                        <td>系統監控、Bug修復、技術支援、安全更新</td>
+                    </tr>
+                    <tr>
+                        <td><strong>標準維護</strong> ⭐</td>
+                        <td class="price-highlight">NT$ 15,000</td>
+                        <td>基礎維護 + 優先支援、功能優化、性能監控</td>
+                    </tr>
+                    <tr>
+                        <td><strong>專業維護</strong></td>
+                        <td class="price-highlight">NT$ 30,000</td>
+                        <td>標準維護 + 即時支援、功能開發、緊急支援</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="recommended">
+                <h3>標準維護方案（推薦）</h3>
+                <ul class="feature-list">
+                    <li>系統監控與健康檢查</li>
+                    <li>Bug 修復（12-24小時響應）</li>
+                    <li>優先技術支援</li>
+                    <li>每月 2-4 小時功能優化</li>
+                    <li>性能監控報告</li>
+                    <li>每季度使用培訓</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📋 系統功能清單</h2>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                <div>
+                    <h3>核心功能</h3>
+                    <ul class="feature-list">
+                        <li>多種賽事類型管理</li>
+                        <li>自定義賽事配置</li>
+                        <li>會編追蹤與歷史記錄</li>
+                        <li>碼量實時計算與校驗</li>
+                        <li>ICM 獎金分配算法</li>
+                        <li>結算結存表生成</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>進階功能</h3>
+                    <ul class="feature-list">
+                        <li>每日報表生成</li>
+                        <li>財務統計分析</li>
+                        <li>用戶權限管理</li>
+                        <li>安全審計日誌</li>
+                        <li>一鍵導出功能</li>
+                        <li>數據備份機制</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>💼 額外服務（按需計費）</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>服務項目</th>
+                        <th>計費方式</th>
+                        <th>價格</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>新功能開發</td>
+                        <td>按工時計費</td>
+                        <td>NT$ 2,000 / 小時</td>
+                    </tr>
+                    <tr>
+                        <td>緊急故障處理</td>
+                        <td>按次計費</td>
+                        <td>NT$ 5,000 / 次</td>
+                    </tr>
+                    <tr>
+                        <td>數據恢復服務</td>
+                        <td>按次計費</td>
+                        <td>NT$ 3,000 / 次</td>
+                    </tr>
+                    <tr>
+                        <td>系統培訓</td>
+                        <td>按次計費</td>
+                        <td>NT$ 5,000 / 次</td>
+                    </tr>
+                    <tr>
+                        <td>現場技術支援</td>
+                        <td>按次計費</td>
+                        <td>NT$ 3,000 / 次 + 交通費</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>🎁 優惠方案</h2>
+            <ul class="feature-list">
+                <li><strong>年度合約 12 個月：</strong>享 9 折優惠</li>
+                <li><strong>年度合約 24 個月：</strong>享 8.5 折優惠</li>
+                <li><strong>年度合約 36 個月：</strong>享 8 折優惠</li>
+                <li><strong>推薦優惠：</strong>推薦新客戶成功簽約，雙方各享 1 個月免費服務</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>📝 服務保證</h2>
+            <ul class="feature-list">
+                <li>系統可用性：99% 以上（排除不可抗力因素）</li>
+                <li>Bug 修復保證：符合服務方案的響應時間</li>
+                <li>數據安全保證：定期備份，數據不遺失</li>
+                <li>技術支援：工作日 09:00-18:00 線上諮詢</li>
+            </ul>
+        </div>
+
+        <div class="contact-box">
+            <h3>📞 聯絡方式</h3>
+            <p><strong>技術支援：</strong></p>
+            <p>📧 Email: support@luckypoker.com</p>
+            <p>📱 電話：待填寫</p>
+            <p>💬 Line：待填寫</p>
+            <p style="margin-top: 15px;"><strong>服務時間：</strong>週一至週五 09:00-18:00 | 週六 10:00-14:00</p>
+        </div>
+
+        <div class="footer">
+            <p><strong>備註：</strong></p>
+            <p>1. 以上報價不含稅，如需開立發票請加 5% 營業稅</p>
+            <p>2. 雲端服務費用（Firebase、Vercel）由客戶自行負擔</p>
+            <p>3. 重大功能開發需另行報價</p>
+            <p style="margin-top: 20px;">感謝您的信任與支持！</p>
+            <p style="margin-top: 10px; color: #999;">本報價單由系統開發團隊製作 | 最後更新：2024年12月</p>
+        </div>
+    </div>
+</body>
+</html>
