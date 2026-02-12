@@ -24,6 +24,7 @@ export default function AllTournamentsView({ onBack, onViewTournament, onOpenDai
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedRange, setSelectedRange] = useState<string>('全部');
 
   useEffect(() => {
     loadTournaments();
@@ -198,7 +199,7 @@ export default function AllTournamentsView({ onBack, onViewTournament, onOpenDai
       case 'today':
         setStartDate(todayStr);
         setEndDate(todayStr);
-        // 預設不展開，用戶可手動展開
+        setSelectedRange('今天');
         setExpandedDates(new Set());
         break;
       case 'week':
@@ -209,7 +210,7 @@ export default function AllTournamentsView({ onBack, onViewTournament, onOpenDai
         const weekStartStr = `${weekStartDate.getFullYear()}-${String(weekStartDate.getMonth() + 1).padStart(2, '0')}-${String(weekStartDate.getDate()).padStart(2, '0')}`;
         setStartDate(weekStartStr);
         setEndDate(todayStr);
-        // 預設不展開，用戶可手動展開
+        setSelectedRange('本週');
         setExpandedDates(new Set());
         break;
       case 'month':
@@ -217,17 +218,19 @@ export default function AllTournamentsView({ onBack, onViewTournament, onOpenDai
         const monthStartStr = `${year}-${String(month).padStart(2, '0')}-01`;
         setStartDate(monthStartStr);
         setEndDate(todayStr);
+        setSelectedRange('本月');
         break;
       case 'year':
         // 今年第一天
         const yearStartStr = `${year}-01-01`;
         setStartDate(yearStartStr);
         setEndDate(todayStr);
+        setSelectedRange('本年');
         break;
       case 'all':
         setStartDate('');
         setEndDate('');
-        // 預設不展開任何日期
+        setSelectedRange('全部');
         setExpandedDates(new Set());
         break;
     }
@@ -236,7 +239,7 @@ export default function AllTournamentsView({ onBack, onViewTournament, onOpenDai
   const clearDateFilter = () => {
     setStartDate('');
     setEndDate('');
-    // 預設不展開任何日期
+    setSelectedRange('全部');
     setExpandedDates(new Set());
   };
 
@@ -244,11 +247,13 @@ export default function AllTournamentsView({ onBack, onViewTournament, onOpenDai
     setSearchTerm('');
   };
 
-  // 計算總統計
+  // 計算總統計（從篩選後的個別賽事重新計算，確保準確性）
   const totalStats = useMemo(() => {
     return filteredGroups.reduce((acc, group) => {
-      acc.totalBuyInGroups += group.totalBuyInGroups;
-      acc.totalBuyIn += group.totalBuyIn;
+      group.tournaments.forEach(t => {
+        acc.totalBuyInGroups += t.totalPlayers;
+        acc.totalBuyIn += t.totalBuyIn;
+      });
       acc.totalTournaments += group.tournaments.length;
       return acc;
     }, { totalBuyInGroups: 0, totalBuyIn: 0, totalTournaments: 0 });
@@ -291,31 +296,6 @@ export default function AllTournamentsView({ onBack, onViewTournament, onOpenDai
           </p>
         </div>
 
-        {/* 總統計 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-gradient-to-br from-blue-600 to-blue-800 bg-opacity-40 px-6 py-4 rounded-xl border border-blue-500 border-opacity-50 shadow-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-2xl">📊</span>
-              <p className="text-sm text-blue-200 font-medium">總賽事數</p>
-            </div>
-            <p className="text-2xl font-bold text-blue-100">{totalStats.totalTournaments} 場</p>
-          </div>
-          <div className="bg-gradient-to-br from-poker-gold-600 to-poker-gold-800 bg-opacity-40 px-6 py-4 rounded-xl border border-poker-gold-500 border-opacity-50 shadow-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-2xl">👥</span>
-              <p className="text-sm text-poker-gold-200 font-medium">總買入組數</p>
-            </div>
-            <p className="text-2xl font-bold text-poker-gold-200">{totalStats.totalBuyInGroups} 組</p>
-          </div>
-          <div className="bg-gradient-to-br from-green-600 to-green-800 bg-opacity-40 px-6 py-4 rounded-xl border border-green-500 border-opacity-50 shadow-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-2xl">💰</span>
-              <p className="text-sm text-green-200 font-medium">總買入金額</p>
-            </div>
-            <p className="text-2xl font-bold text-green-200">{formatCurrency(totalStats.totalBuyIn)}</p>
-          </div>
-        </div>
-
         {/* 搜索和篩選區 */}
         <div className="bg-black bg-opacity-80 rounded-3xl p-6 backdrop-blur-md border-2 border-poker-gold-600 border-opacity-50 shadow-2xl shadow-poker-gold-500/20 mb-6">
           {/* 快捷日期範圍按鈕 */}
@@ -324,31 +304,51 @@ export default function AllTournamentsView({ onBack, onViewTournament, onOpenDai
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setDateRange('today')}
-                className="px-4 py-2 bg-poker-gold-600 hover:bg-poker-gold-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 border-2 border-poker-gold-500 shadow-lg"
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 border-2 shadow-lg ${
+                  selectedRange === '今天'
+                    ? 'bg-poker-gold-500 border-poker-gold-300 text-white ring-2 ring-poker-gold-400 ring-offset-1 ring-offset-black'
+                    : 'bg-poker-gold-600 hover:bg-poker-gold-700 border-poker-gold-500 text-white'
+                }`}
               >
                 📅 今天
               </button>
               <button
                 onClick={() => setDateRange('week')}
-                className="px-4 py-2 bg-poker-gold-600 hover:bg-poker-gold-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 border-2 border-poker-gold-500 shadow-lg"
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 border-2 shadow-lg ${
+                  selectedRange === '本週'
+                    ? 'bg-poker-gold-500 border-poker-gold-300 text-white ring-2 ring-poker-gold-400 ring-offset-1 ring-offset-black'
+                    : 'bg-poker-gold-600 hover:bg-poker-gold-700 border-poker-gold-500 text-white'
+                }`}
               >
                 📆 本週
               </button>
               <button
                 onClick={() => setDateRange('month')}
-                className="px-4 py-2 bg-poker-gold-600 hover:bg-poker-gold-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 border-2 border-poker-gold-500 shadow-lg"
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 border-2 shadow-lg ${
+                  selectedRange === '本月'
+                    ? 'bg-poker-gold-500 border-poker-gold-300 text-white ring-2 ring-poker-gold-400 ring-offset-1 ring-offset-black'
+                    : 'bg-poker-gold-600 hover:bg-poker-gold-700 border-poker-gold-500 text-white'
+                }`}
               >
                 📊 本月
               </button>
               <button
                 onClick={() => setDateRange('year')}
-                className="px-4 py-2 bg-poker-gold-600 hover:bg-poker-gold-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 border-2 border-poker-gold-500 shadow-lg"
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 border-2 shadow-lg ${
+                  selectedRange === '本年'
+                    ? 'bg-poker-gold-500 border-poker-gold-300 text-white ring-2 ring-poker-gold-400 ring-offset-1 ring-offset-black'
+                    : 'bg-poker-gold-600 hover:bg-poker-gold-700 border-poker-gold-500 text-white'
+                }`}
               >
                 📈 本年
               </button>
               <button
                 onClick={() => setDateRange('all')}
-                className="px-4 py-2 bg-white hover:bg-gray-100 text-black rounded-lg text-sm font-semibold transition-all duration-200 border-2 border-white shadow-lg"
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 border-2 shadow-lg ${
+                  selectedRange === '全部'
+                    ? 'bg-white border-white text-black ring-2 ring-white ring-offset-1 ring-offset-black'
+                    : 'bg-gray-700 hover:bg-gray-600 border-gray-500 text-white'
+                }`}
               >
                 🌐 全部
               </button>
@@ -387,7 +387,7 @@ export default function AllTournamentsView({ onBack, onViewTournament, onOpenDai
                   <input
                     type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    onChange={(e) => { setStartDate(e.target.value); setSelectedRange('自訂'); }}
                     max={endDate || new Date().toISOString().split('T')[0]}
                     className="flex-1 px-4 py-2 bg-gray-900 border-2 border-poker-gold-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-poker-gold-500 focus:border-poker-gold-400 transition-all"
                   />
@@ -398,7 +398,7 @@ export default function AllTournamentsView({ onBack, onViewTournament, onOpenDai
                   <input
                     type="date"
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    onChange={(e) => { setEndDate(e.target.value); setSelectedRange('自訂'); }}
                     min={startDate}
                     max={getTaiwanTodayDateKey()}
                     className="flex-1 px-4 py-2 bg-gray-900 border-2 border-poker-gold-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-poker-gold-500 focus:border-poker-gold-400 transition-all"
@@ -413,6 +413,39 @@ export default function AllTournamentsView({ onBack, onViewTournament, onOpenDai
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 總統計（根據篩選條件動態更新） */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="text-lg font-display font-bold text-poker-gold-400">📊 統計總覽</h2>
+            <span className="text-sm text-poker-gold-300 bg-poker-gold-900 bg-opacity-50 px-3 py-1 rounded-full border border-poker-gold-600 font-semibold">
+              {selectedRange}{startDate && endDate && selectedRange === '自訂' ? ` (${startDate} ~ ${endDate})` : ''}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-3 md:gap-4">
+            <div className="bg-gradient-to-br from-blue-600 to-blue-800 bg-opacity-40 px-4 md:px-6 py-3 md:py-4 rounded-xl border border-blue-500 border-opacity-50 shadow-lg">
+              <div className="flex items-center gap-2 mb-1 md:mb-2">
+                <span className="text-lg md:text-2xl">📊</span>
+                <p className="text-xs md:text-sm text-blue-200 font-medium">總賽事數</p>
+              </div>
+              <p className="text-lg md:text-2xl font-bold text-blue-100">{totalStats.totalTournaments} 場</p>
+            </div>
+            <div className="bg-gradient-to-br from-poker-gold-600 to-poker-gold-800 bg-opacity-40 px-4 md:px-6 py-3 md:py-4 rounded-xl border border-poker-gold-500 border-opacity-50 shadow-lg">
+              <div className="flex items-center gap-2 mb-1 md:mb-2">
+                <span className="text-lg md:text-2xl">👥</span>
+                <p className="text-xs md:text-sm text-poker-gold-200 font-medium">總買入組數</p>
+              </div>
+              <p className="text-lg md:text-2xl font-bold text-poker-gold-200">{totalStats.totalBuyInGroups} 組</p>
+            </div>
+            <div className="bg-gradient-to-br from-green-600 to-green-800 bg-opacity-40 px-4 md:px-6 py-3 md:py-4 rounded-xl border border-green-500 border-opacity-50 shadow-lg">
+              <div className="flex items-center gap-2 mb-1 md:mb-2">
+                <span className="text-lg md:text-2xl">💰</span>
+                <p className="text-xs md:text-sm text-green-200 font-medium">總買入金額</p>
+              </div>
+              <p className="text-lg md:text-2xl font-bold text-green-200">{formatCurrency(totalStats.totalBuyIn)}</p>
             </div>
           </div>
         </div>
