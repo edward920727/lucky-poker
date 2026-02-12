@@ -165,24 +165,35 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
         console.warn('获取报表失败，将创建新报表:', error);
       }
 
+      // 獲取前一天的報表，取得昨天的實際現金作為前日櫃檯現金
+      let yesterdayActualCash: number | null = null;
+      try {
+        const prevDate = new Date(dateKey);
+        prevDate.setDate(prevDate.getDate() - 1);
+        const prevDateKey = prevDate.toISOString().split('T')[0];
+        const prevReport = await getDailyReport(prevDateKey);
+        if (prevReport && prevReport.actualCash > 0) {
+          yesterdayActualCash = prevReport.actualCash;
+        }
+      } catch (error) {
+        console.warn('获取前一天报表失败:', error);
+      }
+
       if (existingReport) {
+        // 如果有昨天的實際現金，自動更新前日櫃檯現金
+        if (yesterdayActualCash !== null) {
+          existingReport.previousDayCash = yesterdayActualCash;
+          existingReport.expectedCash = yesterdayActualCash + existingReport.totalIncome - existingReport.totalExpenses;
+        }
         setReport(existingReport);
         setPreviousDayCash(existingReport.previousDayCash.toString());
         setActualCash(existingReport.actualCash.toString());
       } else {
         const newReport = calculateReportFromTournaments(dayTournaments, dateKey);
         
-        // 尝试获取前一天的报表来计算前日现金
-        try {
-          const prevDate = new Date(dateKey);
-          prevDate.setDate(prevDate.getDate() - 1);
-          const prevDateKey = prevDate.toISOString().split('T')[0];
-          const prevReport = await getDailyReport(prevDateKey);
-          if (prevReport) {
-            newReport.previousDayCash = prevReport.actualCash || 0;
-          }
-        } catch (error) {
-          console.warn('获取前一天报表失败:', error);
+        // 使用昨天的實際現金作為前日櫃檯現金
+        if (yesterdayActualCash !== null) {
+          newReport.previousDayCash = yesterdayActualCash;
         }
         
         setReport(newReport);
@@ -223,7 +234,7 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
 
   // 监听赛事数据变化，自动更新报表
   useEffect(() => {
-    const handleTournamentUpdate = () => {
+    const handleTournamentUpdate = async () => {
       if (report) {
         // 重新加载所有赛事数据
         const allTournaments = getAllTournaments();
@@ -238,10 +249,26 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
         // 保留现有的支出和现金数据
         updatedReport.expenses = report.expenses;
         updatedReport.totalExpenses = report.totalExpenses;
-        updatedReport.previousDayCash = report.previousDayCash;
+        
+        // 取得昨天的實際現金作為前日櫃檯現金
+        let prevCash = report.previousDayCash;
+        try {
+          const prevDate = new Date(dateKey);
+          prevDate.setDate(prevDate.getDate() - 1);
+          const prevDateKey = prevDate.toISOString().split('T')[0];
+          const prevReport = await getDailyReport(prevDateKey);
+          if (prevReport && prevReport.actualCash > 0) {
+            prevCash = prevReport.actualCash;
+          }
+        } catch {
+          // 保留原值
+        }
+        
+        updatedReport.previousDayCash = prevCash;
         updatedReport.actualCash = report.actualCash;
-        updatedReport.expectedCash = report.previousDayCash + updatedReport.totalIncome - updatedReport.totalExpenses;
+        updatedReport.expectedCash = prevCash + updatedReport.totalIncome - updatedReport.totalExpenses;
         setReport(updatedReport);
+        setPreviousDayCash(prevCash.toString());
       }
     };
 
@@ -271,9 +298,22 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
       // 重新計算報表數據（從賽事記錄）
       const refreshedReport = calculateReportFromTournaments(dayTournaments, dateKey);
       
-      // 保留現有的支出和現金數據（用戶手動輸入的）
-      // 使用當前輸入框的值（如果用戶已修改但未保存）
-      const currentPrevCash = parseFloat(previousDayCash) || report.previousDayCash || 0;
+      // 重新獲取前一天的報表，取得昨天的實際現金
+      let yesterdayActualCash: number | null = null;
+      try {
+        const prevDate = new Date(dateKey);
+        prevDate.setDate(prevDate.getDate() - 1);
+        const prevDateKey = prevDate.toISOString().split('T')[0];
+        const prevReport = await getDailyReport(prevDateKey);
+        if (prevReport && prevReport.actualCash > 0) {
+          yesterdayActualCash = prevReport.actualCash;
+        }
+      } catch (error) {
+        console.warn('刷新時获取前一天报表失败:', error);
+      }
+      
+      // 使用昨天的實際現金作為前日櫃檯現金，如果沒有則保留當前值
+      const currentPrevCash = yesterdayActualCash !== null ? yesterdayActualCash : (parseFloat(previousDayCash) || report.previousDayCash || 0);
       const currentActualCash = parseFloat(actualCash) || report.actualCash || 0;
       
       refreshedReport.expenses = report.expenses;
@@ -707,6 +747,9 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
                 className="w-full px-2 py-1.5 bg-gray-800 border border-gray-600 rounded-lg text-white text-base md:text-lg font-bold"
                 placeholder="0"
               />
+              <div className="text-blue-300 text-xs mt-0.5 opacity-70">
+                (自動取自昨日實際現金)
+              </div>
             </div>
             <div className="bg-blue-800 bg-opacity-50 rounded-lg p-2">
               <div className="text-blue-200 text-xs mb-1">今日應有現金</div>
