@@ -140,6 +140,14 @@ function isIgnorableNetworkError(error: any): boolean {
     return true;
   }
   
+  // Unknown SID 錯誤（Firestore long-polling 連線中斷後重連時常見）
+  if (errorMessage.includes('Unknown SID') ||
+      errorString.includes('unknown sid') ||
+      errorMessage.includes('SID') ||
+      (errorMessage.includes('400') && errorMessage.includes('SID'))) {
+    return true;
+  }
+  
   return false;
 }
 
@@ -151,39 +159,44 @@ export function setupGlobalErrorHandler(): void {
   const originalError = console.error;
   const originalWarn = console.warn;
   
+  // 判斷是否為可忽略的 Firebase 控制台訊息
+  const isIgnorableFirebaseLog = (text: string): boolean => {
+    const lower = text.toLowerCase();
+    // Firestore 相關的暫時性網路錯誤
+    if (lower.includes('firestore.googleapis.com') &&
+        (lower.includes('404') || lower.includes('400') || 
+         lower.includes('failed to load resource') || lower.includes('unknown sid') ||
+         lower.includes('quic'))) {
+      return true;
+    }
+    // QUIC 協議錯誤
+    if (lower.includes('quic_protocol_error') || lower.includes('quic_packet_write_error')) {
+      return true;
+    }
+    // Unknown SID（long-polling 重連常見）
+    if (lower.includes('unknown sid')) {
+      return true;
+    }
+    return false;
+  };
+
   // 攔截 console.error
   console.error = (...args: any[]) => {
     const errorString = args.map(arg => 
-      typeof arg === 'string' ? arg : JSON.stringify(arg)
+      typeof arg === 'string' ? arg : (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))
     ).join(' ');
     
-    // 檢查是否為可忽略的 Firebase 錯誤
-    if (errorString.includes('firestore.googleapis.com') &&
-        (errorString.includes('404') || errorString.includes('400') || 
-         errorString.includes('Failed to load resource'))) {
-      // 靜默處理，不顯示錯誤
-      return;
-    }
-    
-    // 其他錯誤正常顯示
+    if (isIgnorableFirebaseLog(errorString)) return;
     originalError.apply(console, args);
   };
   
-  // 攔截 console.warn（某些錯誤可能以警告形式顯示）
+  // 攔截 console.warn
   console.warn = (...args: any[]) => {
     const warnString = args.map(arg => 
-      typeof arg === 'string' ? arg : JSON.stringify(arg)
+      typeof arg === 'string' ? arg : (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))
     ).join(' ');
     
-    // 檢查是否為可忽略的 Firebase 錯誤
-    if (warnString.includes('firestore.googleapis.com') &&
-        (warnString.includes('404') || warnString.includes('400') || 
-         warnString.includes('Failed to load resource'))) {
-      // 靜默處理，不顯示警告
-      return;
-    }
-    
-    // 其他警告正常顯示
+    if (isIgnorableFirebaseLog(warnString)) return;
     originalWarn.apply(console, args);
   };
   
@@ -191,13 +204,15 @@ export function setupGlobalErrorHandler(): void {
   window.addEventListener('error', (event) => {
     const errorMessage = event.message || '';
     const errorSource = event.filename || '';
+    const combined = `${errorMessage} ${errorSource}`.toLowerCase();
     
-    // 檢查是否為 Firebase Firestore 的 404/400 錯誤
-    if (errorSource.includes('firestore.googleapis.com') ||
-        errorMessage.includes('firestore.googleapis.com') ||
-        (errorMessage.includes('404') && errorSource.includes('firestore')) ||
-        (errorMessage.includes('400') && errorSource.includes('firestore'))) {
-      // 阻止錯誤顯示在控制台
+    // 檢查是否為 Firebase Firestore 的網路/協議錯誤
+    if (combined.includes('firestore.googleapis.com') ||
+        combined.includes('quic_protocol_error') ||
+        combined.includes('quic_packet_write_error') ||
+        combined.includes('unknown sid') ||
+        combined.includes('net::err_quic') ||
+        (combined.includes('firestore') && (combined.includes('404') || combined.includes('400')))) {
       event.preventDefault();
       return false;
     }

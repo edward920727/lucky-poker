@@ -49,23 +49,27 @@ export default function AllTournamentsView({ onBack, onViewTournament, onOpenDai
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
     loadTournaments();
     loadDailyReports();
     
     // 設置實時同步（當其他設備更新數據時自動刷新）
+    let unsubscribe: (() => void) | null = null;
     try {
-      const unsubscribe = setupRealtimeSyncForTournaments((tournaments) => {
-        setTournaments(tournaments);
-        // 保持當前展開狀態，不自動展開新日期
+      unsubscribe = setupRealtimeSyncForTournaments((tournaments) => {
+        if (isMounted) {
+          setTournaments(tournaments);
+        }
       });
-      
-      return () => {
-        if (unsubscribe) unsubscribe();
-      };
     } catch (error) {
       console.warn('實時同步設置失敗（將使用本地存儲）:', error);
     }
-  }, []);
+    
+    return () => {
+      isMounted = false;
+      if (unsubscribe) unsubscribe();
+    };
+  }, [loadDailyReports]);
 
     const loadTournaments = () => {
     const records = getAllTournaments();

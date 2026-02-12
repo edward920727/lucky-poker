@@ -60,14 +60,27 @@ function initFirebase(): boolean {
 function isIgnorableNetworkError(error: any): boolean {
   if (!error) return false;
   
-  // 檢查錯誤訊息中是否包含 QUIC 相關錯誤
   const errorMessage = error.message || '';
   const errorCode = error.code || '';
+  const errorString = JSON.stringify(error).toLowerCase();
   
   // QUIC 協議錯誤（通常是網路層面的暫時性問題）
   if (errorMessage.includes('QUIC') || 
       errorMessage.includes('QUIC_PROTOCOL_ERROR') ||
-      errorMessage.includes('QUIC_PACKET_WRITE_ERROR')) {
+      errorMessage.includes('QUIC_PACKET_WRITE_ERROR') ||
+      errorString.includes('quic')) {
+    return true;
+  }
+  
+  // Unknown SID（long-polling 重連常見的暫時性錯誤）
+  if (errorMessage.includes('Unknown SID') ||
+      errorString.includes('unknown sid')) {
+    return true;
+  }
+  
+  // HTTP 400/404 錯誤（Firebase SDK 會自動重試）
+  if (errorMessage.includes('400') || errorMessage.includes('404') ||
+      errorMessage.includes('firestore.googleapis.com')) {
     return true;
   }
   
@@ -75,7 +88,14 @@ function isIgnorableNetworkError(error: any): boolean {
   if (errorCode === 'unavailable' || 
       errorCode === 'deadline-exceeded' ||
       errorMessage.includes('network') ||
-      errorMessage.includes('NetworkError')) {
+      errorMessage.includes('NetworkError') ||
+      errorMessage.includes('fetch')) {
+    return true;
+  }
+  
+  // Firestore Listen channel 錯誤
+  if (errorMessage.includes('Listen/channel') || 
+      errorString.includes('listen/channel')) {
     return true;
   }
   
@@ -650,33 +670,27 @@ export function setupUsersRealtimeSync(
       // 通知組件更新
       onUpdate(users);
     }, (error: any) => {
-      // 忽略非關鍵的網路錯誤（QUIC 協議錯誤等，Firebase SDK 會自動重試）
+      // 忽略非關鍵的網路錯誤（QUIC 協議錯誤、SID 錯誤等，Firebase SDK 會自動重試）
       if (isIgnorableNetworkError(error)) {
-        // 靜默處理，不顯示錯誤訊息
         return;
       }
       
       // 處理權限錯誤（通常是安全規則問題）
       if (error?.code === 'permission-denied' || error?.code === 7) {
         console.warn('Firestore 權限被拒絕，請檢查安全規則。將使用本地存儲模式。');
-        console.warn('提示：請在 Firebase Console 中將 users 集合的安全規則設置為 allow read, write: if true;');
-        // 嘗試一次性加載數據作為備份
         getAllUsersAsync().then(users => {
           if (users.length > 0) {
             onUpdate(users);
           }
         }).catch(async () => {
-          // 如果也失敗，使用本地數據並遷移
           const localUsers = await getAllUsersAsync();
           onUpdate(localUsers);
         });
       } else {
-        console.error('實時同步錯誤:', error);
-        // 對於其他錯誤，也嘗試使用本地數據並遷移
+        console.warn('用戶實時同步遇到問題，使用本地數據:', error?.code || error?.message || error);
         getAllUsersAsync().then(localUsers => {
           onUpdate(localUsers);
         }).catch(() => {
-          // 如果遷移也失敗，至少返回空數組
           onUpdate([]);
         });
       }
