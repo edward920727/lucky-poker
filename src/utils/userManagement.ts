@@ -2,9 +2,7 @@
  * 用戶管理工具（支援雲端同步）
  */
 
-import { initializeApp, FirebaseApp } from 'firebase/app';
 import { 
-  getFirestore, 
   Firestore, 
   collection, 
   doc, 
@@ -14,7 +12,7 @@ import {
   onSnapshot,
   Timestamp
 } from 'firebase/firestore';
-import { firebaseConfig, isFirebaseConfigured } from '../../utils/firebaseConfig';
+import { getSharedFirebase } from '../../utils/firebaseConfig';
 import { getCurrentUsername } from './auth';
 import { hashPassword, verifyPassword, isLegacyUserFormat } from './passwordHash';
 
@@ -42,26 +40,17 @@ interface LegacyUser {
   isAdmin?: boolean;
 }
 
-let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
 
-// 初始化 Firebase
+// 初始化 Firebase（使用共用實例）
 function initFirebase(): boolean {
-  if (!isFirebaseConfigured()) {
-    console.warn('Firebase 未配置，將使用本地存儲');
-    return false;
-  }
-
-  try {
-    if (!app) {
-      app = initializeApp(firebaseConfig);
-      db = getFirestore(app);
-    }
+  if (db) return true;
+  const shared = getSharedFirebase();
+  if (shared) {
+    db = shared.db;
     return true;
-  } catch (error) {
-    console.error('Firebase 初始化失敗:', error);
-    return false;
   }
+  return false;
 }
 
 /**

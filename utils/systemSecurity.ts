@@ -2,28 +2,26 @@
  * 系统安全设定工具（IP 管理）
  */
 
-import { initializeApp, FirebaseApp } from 'firebase/app';
 import { 
-  getFirestore, 
   Firestore, 
   doc, 
   getDoc, 
   setDoc
 } from 'firebase/firestore';
-import { firebaseConfig, isFirebaseConfigured, getMissingFirebaseConfig } from './firebaseConfig';
+import { getSharedFirebase, getMissingFirebaseConfig, isFirebaseConfigured } from './firebaseConfig';
 import { getCurrentUsername } from '../src/utils/auth';
 
-let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
 
-// 初始化 Firebase
+// 初始化 Firebase（使用共用實例）
 function initFirebase(): { success: boolean; error?: string; details?: string } {
+  if (db) return { success: true };
+
   if (!isFirebaseConfigured()) {
     const missingFields = getMissingFirebaseConfig();
     const errorMsg = missingFields.length > 0
       ? `Firebase 配置不完整，缺少以下環境變量：${missingFields.join(', ')}`
       : 'Firebase 未配置';
-    console.warn(errorMsg);
     return { 
       success: false, 
       error: errorMsg,
@@ -31,28 +29,16 @@ function initFirebase(): { success: boolean; error?: string; details?: string } 
     };
   }
 
-  try {
-    if (!app) {
-      app = initializeApp(firebaseConfig);
-      db = getFirestore(app);
-    }
+  const shared = getSharedFirebase();
+  if (shared) {
+    db = shared.db;
     return { success: true };
-  } catch (error: any) {
-    const errorMessage = error?.message || '';
-    if (errorMessage.includes('already exists') || errorMessage.includes('duplicate')) {
-      if (!db && app) {
-        db = getFirestore(app);
-      }
-      return { success: true };
-    }
-    const errorDetails = `Firebase 初始化失敗: ${error?.code || error?.message || '未知錯誤'}`;
-    console.warn(errorDetails, error);
-    return { 
-      success: false, 
-      error: 'Firebase 初始化失敗',
-      details: errorDetails
-    };
   }
+  return { 
+    success: false, 
+    error: 'Firebase 初始化失敗',
+    details: 'Firebase 共用實例初始化失敗'
+  };
 }
 
 const SYSTEM_SETTINGS_COLLECTION = 'system_settings';

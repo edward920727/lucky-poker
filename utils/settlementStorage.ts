@@ -1,35 +1,24 @@
 import { TournamentSettlement } from '../types/settlement';
-import { initializeApp, FirebaseApp } from 'firebase/app';
 import { 
-  getFirestore, 
   Firestore, 
   collection, 
   doc, 
   setDoc,
   Timestamp
 } from 'firebase/firestore';
-import { firebaseConfig, isFirebaseConfigured } from './firebaseConfig';
+import { getSharedFirebase } from './firebaseConfig';
 
-let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
 
-// 初始化 Firebase
+// 初始化 Firebase（使用共用實例）
 function initFirebase(): boolean {
-  if (!isFirebaseConfigured()) {
-    console.warn('Firebase 未配置，將使用本地存儲');
-    return false;
-  }
-
-  try {
-    if (!app) {
-      app = initializeApp(firebaseConfig);
-      db = getFirestore(app);
-    }
+  if (db) return true;
+  const shared = getSharedFirebase();
+  if (shared) {
+    db = shared.db;
     return true;
-  } catch (error) {
-    console.error('Firebase 初始化失敗:', error);
-    return false;
   }
+  return false;
 }
 
 // 轉換 TournamentSettlement 為 Firestore 格式

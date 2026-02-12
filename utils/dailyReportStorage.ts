@@ -8,42 +8,22 @@ import {
   query, 
   orderBy,
   deleteDoc,
-  Timestamp
+  Timestamp,
+  Firestore
 } from 'firebase/firestore';
-import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import { firebaseConfig, isFirebaseConfigured } from './firebaseConfig';
+import { getSharedFirebase } from './firebaseConfig';
 
-let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
 
-// 初始化 Firebase
+// 初始化 Firebase（使用共用實例）
 function initFirebase(): boolean {
-  if (!isFirebaseConfigured()) {
-    console.warn('Firebase 未配置，將使用本地存儲');
-    return false;
-  }
-
-  try {
-    if (!app) {
-      app = initializeApp(firebaseConfig);
-      db = getFirestore(app);
-    }
+  if (db) return true;
+  const shared = getSharedFirebase();
+  if (shared) {
+    db = shared.db;
     return true;
-  } catch (error: any) {
-    // 檢查是否為配置錯誤
-    const errorMessage = error?.message || '';
-    if (errorMessage.includes('already exists') || errorMessage.includes('duplicate')) {
-      // Firebase 已經初始化，這是正常的
-      if (!db && app) {
-        db = getFirestore(app);
-      }
-      return true;
-    }
-    
-    console.warn('Firebase 初始化遇到問題，將使用本地存儲:', error?.code || error?.message || error);
-    return false;
   }
+  return false;
 }
 
 const STORAGE_KEY = 'lucky_poker_daily_reports';

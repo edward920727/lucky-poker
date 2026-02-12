@@ -1,8 +1,6 @@
 import { TournamentRecord } from '../types/tournament';
-import { initializeApp, FirebaseApp } from 'firebase/app';
+import { Firestore } from 'firebase/firestore';
 import { 
-  getFirestore, 
-  Firestore, 
   collection, 
   doc, 
   getDocs, 
@@ -14,7 +12,7 @@ import {
   onSnapshot,
   Timestamp
 } from 'firebase/firestore';
-import { firebaseConfig, isFirebaseConfigured } from './firebaseConfig';
+import { getSharedFirebase } from './firebaseConfig';
 
 /**
  * 生成台灣時區格式的日期時間字符串（統一格式：YYYY-MM-DDTHH:mm:ss）
@@ -74,39 +72,17 @@ function getTaiwanDateTimeString(date?: Date): string {
   return result;
 }
 
-let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
 
-// 初始化 Firebase
+// 初始化 Firebase（使用共用實例）
 function initFirebase(): boolean {
-  if (!isFirebaseConfigured()) {
-    console.warn('Firebase 未配置，將使用本地存儲');
-    return false;
-  }
-
-  try {
-    if (!app) {
-      app = initializeApp(firebaseConfig);
-      db = getFirestore(app);
-      
-      // 設置 Firestore 連接設置，減少錯誤日誌
-      // 注意：這些設置可能需要根據實際情況調整
-    }
+  if (db) return true;
+  const shared = getSharedFirebase();
+  if (shared) {
+    db = shared.db;
     return true;
-  } catch (error: any) {
-    // 檢查是否為配置錯誤
-    const errorMessage = error?.message || '';
-    if (errorMessage.includes('already exists') || errorMessage.includes('duplicate')) {
-      // Firebase 已經初始化，這是正常的
-      if (!db && app) {
-        db = getFirestore(app);
-      }
-      return true;
-    }
-    
-    console.warn('Firebase 初始化遇到問題，將使用本地存儲:', error?.code || error?.message || error);
-    return false;
   }
+  return false;
 }
 
 /**

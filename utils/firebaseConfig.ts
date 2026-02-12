@@ -10,6 +10,9 @@
  * 获取配置信息：https://console.firebase.google.com/
  */
 
+import { initializeApp, FirebaseApp } from 'firebase/app';
+import { initializeFirestore, getFirestore, Firestore } from 'firebase/firestore';
+
 // 从环境变量读取配置（Vite 会自动处理 VITE_ 前缀的环境变量）
 // 使用静默模式，避免每个变量都输出警告
 const getEnvVar = (key: keyof ImportMetaEnv, defaultValue?: string, silent: boolean = true): string => {
@@ -30,6 +33,63 @@ export const firebaseConfig = {
   appId: getEnvVar('VITE_FIREBASE_APP_ID', undefined, true),
   measurementId: getEnvVar('VITE_FIREBASE_MEASUREMENT_ID', '', true)
 };
+
+// ====== 共用 Firebase 實例（全應用單一初始化）======
+let sharedApp: FirebaseApp | null = null;
+let sharedDb: Firestore | null = null;
+
+/**
+ * 取得共用的 Firebase App 與 Firestore 實例
+ * 使用 experimentalAutoDetectLongPolling 避免 QUIC 協議錯誤
+ */
+export function getSharedFirebase(): { app: FirebaseApp; db: Firestore } | null {
+  if (sharedApp && sharedDb) {
+    return { app: sharedApp, db: sharedDb };
+  }
+
+  if (!isFirebaseConfigured()) {
+    return null;
+  }
+
+  try {
+    if (!sharedApp) {
+      sharedApp = initializeApp(firebaseConfig);
+      // 使用 initializeFirestore 設定 long-polling，避免 QUIC 協議錯誤
+      sharedDb = initializeFirestore(sharedApp, {
+        experimentalAutoDetectLongPolling: true,
+      });
+    }
+    if (!sharedDb) return null;
+    return { app: sharedApp, db: sharedDb };
+  } catch (error: any) {
+    const errorMessage = error?.message || '';
+    if (errorMessage.includes('already exists') || errorMessage.includes('duplicate')) {
+      if (!sharedApp) {
+        // app 已經被其他模塊初始化，取得現有實例
+        sharedApp = initializeApp(firebaseConfig, '[DEFAULT]');
+      }
+      if (!sharedDb && sharedApp) {
+        try {
+          sharedDb = getFirestore(sharedApp);
+        } catch {
+          // getFirestore 應該能取得已初始化的實例
+        }
+      }
+      if (sharedApp && sharedDb) {
+        return { app: sharedApp, db: sharedDb };
+      }
+    }
+    // Firestore 已經被 initializeFirestore 初始化過，用 getFirestore 取得
+    if (errorMessage.includes('Firestore has already been started')) {
+      if (sharedApp) {
+        sharedDb = getFirestore(sharedApp);
+        return { app: sharedApp, db: sharedDb };
+      }
+    }
+    console.warn('Firebase 共用實例初始化失敗:', error?.code || error?.message || error);
+    return null;
+  }
+}
 
 // 用于跟踪是否已经输出过配置警告，避免重复
 let hasWarnedAboutConfig = false;
