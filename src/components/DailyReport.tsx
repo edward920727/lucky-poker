@@ -21,26 +21,18 @@ const EXPENSE_TYPE_LABELS: Record<ExpenseType, string> = {
 const ACTIVITY_BONUS_AMOUNTS = [100, 200, 300, 500];
 
 export default function DailyReportView({ onBack, selectedDate }: DailyReportProps) {
-  console.log('DailyReportView 组件已加载', { onBack, selectedDate });
-  
   const [report, setReport] = useState<DailyReport | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedReportDate, setSelectedReportDate] = useState<string>(() => {
-    // 确保 selectedDate 是字符串类型
-    let date: string;
     if (selectedDate && typeof selectedDate === 'string') {
-      date = selectedDate;
-    } else {
-      date = getTaiwanTodayDateKey();
+      return selectedDate;
     }
-    console.log('初始化日期:', date, 'selectedDate 类型:', typeof selectedDate);
-    return date;
+    return getTaiwanTodayDateKey();
   });
   
   // 当 selectedDate prop 变化时更新
   useEffect(() => {
     if (selectedDate && typeof selectedDate === 'string') {
-      console.log('selectedDate prop 变化，更新为:', selectedDate);
       setSelectedReportDate(selectedDate);
     }
   }, [selectedDate]);
@@ -154,14 +146,10 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
   }, []);
 
   const loadData = useCallback(async () => {
-    console.log('开始加载报表数据，日期:', selectedReportDate);
     setIsLoading(true);
     try {
-      // 加载赛事记录
       const allTournaments = getAllTournaments();
-      console.log('获取到所有赛事:', allTournaments.length);
       const dateKey = selectedReportDate.split('T')[0];
-      console.log('筛选日期键:', dateKey);
       
       // 筛选当天的赛事
       const dayTournaments = allTournaments.filter(t => {
@@ -178,15 +166,11 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
       }
 
       if (existingReport) {
-        console.log('找到已存在的报表:', existingReport);
         setReport(existingReport);
         setPreviousDayCash(existingReport.previousDayCash.toString());
         setActualCash(existingReport.actualCash.toString());
       } else {
-        console.log('创建新报表，当天赛事数:', dayTournaments.length);
-        // 创建新报表
         const newReport = calculateReportFromTournaments(dayTournaments, dateKey);
-        console.log('新报表创建完成:', newReport);
         
         // 尝试获取前一天的报表来计算前日现金
         try {
@@ -207,9 +191,7 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
       }
     } catch (error) {
       console.error('加载报表数据失败:', error);
-      // 即使出错也创建一个空报表，避免一直显示加载中
       const dateKey = selectedReportDate.split('T')[0];
-      console.log('创建空报表，日期键:', dateKey);
       const emptyReport: DailyReport = {
         id: dateKey,
         date: dateKey,
@@ -229,21 +211,13 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
       setReport(emptyReport);
       setPreviousDayCash('0');
       setActualCash('0');
-      console.log('已设置空报表');
     } finally {
       setIsLoading(false);
-      console.log('加载完成，isLoading 设为 false');
     }
   }, [selectedReportDate, calculateReportFromTournaments]);
 
-  // 立即显示一个测试内容，确保组件被渲染
-  useEffect(() => {
-    console.log('DailyReportView useEffect 执行');
-  }, []);
-  
   // 加载数据
   useEffect(() => {
-    console.log('开始调用 loadData');
     loadData();
   }, [loadData]);
 
@@ -418,11 +392,8 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
     return actual - expected;
   }, [expectedCash, actualCash]);
 
-  console.log('渲染检查 - isLoading:', isLoading, 'report:', report);
-  
   // 如果正在加载，显示加载画面
   if (isLoading) {
-    console.log('显示加载中画面');
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center" style={{ backgroundColor: '#000' }}>
         <div className="text-center">
@@ -452,15 +423,10 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    console.log('使用空报表作为显示报表:', emptyReport);
     return emptyReport;
   })();
 
-  console.log('准备渲染报表界面，displayReport:', displayReport);
-  
-  // 如果还是没有报表，至少显示一个基本界面
   if (!displayReport) {
-    console.error('displayReport 仍然为 null 或 undefined');
     return (
       <div className="min-h-screen bg-black text-white p-4 md:p-8" style={{ backgroundColor: '#000' }}>
         <div className="max-w-6xl mx-auto">

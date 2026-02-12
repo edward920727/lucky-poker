@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Player, PaymentMethod } from '../../constants/pokerConfig';
-import { TournamentType } from '../../constants/pokerConfig';
+import { Player, PaymentMethod, TournamentType } from '../../constants/pokerConfig';
 import { CustomTournamentConfig } from '../../types/tournament';
 
 interface FinancialStatsProps {

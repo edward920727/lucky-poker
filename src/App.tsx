@@ -150,15 +150,12 @@ function App() {
   };
 
   const handleOpenDailyReport = (date?: string) => {
-    console.log('handleOpenDailyReport 被调用', date, typeof date);
-    // 确保 date 是字符串类型
     if (date && typeof date === 'string') {
       setSelectedReportDate(date);
     } else {
       setSelectedReportDate(undefined);
     }
     setCurrentView('dailyReport');
-    console.log('currentView 设置为 dailyReport');
   };
 
   const handleBackFromDailyReport = () => {
@@ -283,7 +280,6 @@ function App() {
   }
 
   if (currentView === 'dailyReport') {
-    console.log('渲染 DailyReport 组件', selectedReportDate);
     return (
       <DailyReport
         onBack={handleBackFromDailyReport}

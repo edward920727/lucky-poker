@@ -605,10 +605,8 @@ export async function saveTournament(tournament: TournamentRecord): Promise<void
     try {
       const docRef = doc(db, COLLECTION_NAME, tournament.id);
       await setDoc(docRef, tournamentToFirestore(tournament), { merge: true });
-      console.log('賽事已同步到雲端');
     } catch (error) {
       console.error('同步到雲端失敗:', error);
-      // 不拋出錯誤，因為本地已保存
     }
   }
 }
@@ -617,15 +615,12 @@ export async function saveTournament(tournament: TournamentRecord): Promise<void
  * 刪除賽事記錄
  */
 export async function deleteTournament(id: string): Promise<void> {
-  // 先從本地刪除
   deleteTournamentLocal(id);
 
-  // 如果 Firebase 已配置，從雲端刪除
   if (initFirebase() && db) {
     try {
       const docRef = doc(db, COLLECTION_NAME, id);
       await deleteDoc(docRef);
-      console.log('賽事已從雲端刪除');
     } catch (error) {
       console.error('從雲端刪除失敗:', error);
     }
@@ -673,7 +668,6 @@ export async function updateTournament(tournament: TournamentRecord): Promise<vo
     try {
       const docRef = doc(db, COLLECTION_NAME, tournament.id);
       await setDoc(docRef, tournamentToFirestore(tournament), { merge: true });
-      console.log('賽事已同步到雲端');
     } catch (error) {
       console.error('同步到雲端失敗:', error);
     }

@@ -196,7 +196,6 @@ export async function isIPAuthorized(): Promise<boolean> {
   // 檢查當前用戶是否為超級管理員，如果是則跳過 IP 檢查
   const currentUsername = getCurrentUsername();
   if (currentUsername && isSuperAdmin(currentUsername)) {
-    console.log('超級管理員用戶，跳過 IP 檢查');
     return true;
   }
 
@@ -230,7 +229,6 @@ export async function checkIPAuthorization(): Promise<{ authorized: boolean; mes
   // 檢查當前用戶是否為超級管理員，如果是則跳過 IP 檢查
   const currentUsername = getCurrentUsername();
   if (currentUsername && isSuperAdmin(currentUsername)) {
-    console.log('超級管理員用戶，跳過 IP 檢查');
     return { authorized: true, message: '超級管理員權限，已跳過 IP 檢查' };
   }
 

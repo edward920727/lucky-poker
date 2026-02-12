@@ -113,7 +113,7 @@ async function migrateLegacyUser(legacyUser: LegacyUser): Promise<User> {
  */
 async function migrateUserIfNeeded(user: any): Promise<User> {
   if (isLegacyUserFormat(user)) {
-    console.log(`遷移用戶 ${user.username} 的密碼格式...`);
+    // 遷移用戶密碼格式
     return await migrateLegacyUser(user as LegacyUser);
   }
   // 如果已經是 new format，直接返回
@@ -265,12 +265,6 @@ function getAllUsersLocal(): (User | LegacyUser)[] {
 
   try {
     const users: (User | LegacyUser)[] = JSON.parse(stored);
-    // 確保默認管理員存在（如果是舊格式，會在異步函數中遷移）
-    const adminExists = users.some(u => u.username === DEFAULT_ADMIN_USERNAME);
-    if (!adminExists) {
-      // 添加一個標記，表示需要創建默認管理員（異步函數會處理）
-      // 這裡不添加，讓異步函數處理
-    }
     return users;
   } catch (error) {
     console.error('Error parsing users:', error);
@@ -301,7 +295,7 @@ async function saveUsers(users: User[]): Promise<void> {
       });
 
       await Promise.all(batch);
-      console.log('用戶已同步到雲端');
+      // 用戶已同步到雲端
     } catch (error) {
       console.error('同步到雲端失敗:', error);
       // 不拋出錯誤，因為本地已保存
@@ -427,7 +421,7 @@ export async function deleteUserAsync(username: string): Promise<{ success: bool
     try {
       const userDocRef = doc(db, USERS_COLLECTION, username);
       await deleteDoc(userDocRef);
-      console.log('用戶已從雲端刪除');
+      // 用戶已從雲端刪除
     } catch (error) {
       console.error('從雲端刪除失敗:', error);
     }

@@ -57,7 +57,7 @@ export async function saveSettlementToFirebase(settlement: TournamentSettlement)
     const firestoreData = settlementToFirestore(settlement);
     await setDoc(settlementDoc, firestoreData, { merge: true });
     
-    console.log('結算記錄已保存到 Firebase:', settlement.id);
+    // 結算記錄已同步到 Firebase
   } catch (error) {
     console.error('保存結算記錄到 Firebase 失敗:', error);
     throw error;
@@ -81,7 +81,7 @@ export function saveSettlementToLocal(settlement: TournamentSettlement): void {
     }
     
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settlements));
-    console.log('結算記錄已保存到本地存儲:', settlement.id);
+    // 結算記錄已保存到本地存儲
   } catch (error) {
     console.error('保存結算記錄到本地存儲失敗:', error);
     throw error;

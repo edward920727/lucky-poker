@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { TournamentType, PaymentMethod } from '../../constants/pokerConfig';
+import { PaymentMethod, PLAYER_HISTORY_DB } from '../../constants/pokerConfig';
 import VirtualKeyboard from './VirtualKeyboard';
 import PlayerHistoryModal from './PlayerHistoryModal';
-import { PLAYER_HISTORY_DB } from '../../constants/pokerConfig';
 
 interface PlayerInputProps {
   onAddPlayer: (memberId: string, paymentMethod: PaymentMethod) => void;
-  tournamentType: TournamentType;
 }
 
 export default function PlayerInput({ onAddPlayer }: PlayerInputProps) {

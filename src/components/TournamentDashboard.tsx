@@ -385,7 +385,6 @@ export default function TournamentDashboard({
         {/* 玩家輸入區域 */}
         <PlayerInput
           onAddPlayer={handleAddPlayer}
-          tournamentType={tournamentType}
         />
 
         {/* 玩家列表 */}
