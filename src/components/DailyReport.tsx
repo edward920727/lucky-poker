@@ -366,8 +366,8 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
     }
   };
 
-  // 添加额外支出
-  const handleAddExpense = () => {
+  // 添加额外支出（自動保存）
+  const handleAddExpense = async () => {
     const amount = parseFloat(expenseAmount);
     if (!amount || amount <= 0) {
       alert('请输入有效的金额');
@@ -394,14 +394,21 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
       updatedAt: new Date().toISOString(),
     };
 
-    setReport(updatedReport);
-    setExpenseAmount('');
-    setExpenseDescription('');
-    setShowExpenseForm(false);
+    try {
+      await saveDailyReport(updatedReport);
+      setReport(updatedReport);
+      setExpenseAmount('');
+      setExpenseDescription('');
+      setShowExpenseForm(false);
+      alert('支出已添加並保存');
+    } catch (error) {
+      console.error('保存支出失敗:', error);
+      alert('保存支出失敗，請重試');
+    }
   };
 
-  // 删除支出
-  const handleDeleteExpense = (expenseId: string) => {
+  // 删除支出（自動保存）
+  const handleDeleteExpense = async (expenseId: string) => {
     if (!report) return;
     if (!confirm('确定要删除这笔支出吗？')) return;
 
@@ -415,7 +422,14 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
       updatedAt: new Date().toISOString(),
     };
 
-    setReport(updatedReport);
+    try {
+      await saveDailyReport(updatedReport);
+      setReport(updatedReport);
+      alert('支出已刪除並保存');
+    } catch (error) {
+      console.error('刪除支出後保存失敗:', error);
+      alert('刪除支出後保存失敗，請重試');
+    }
   };
 
   // 计算今日应有现金

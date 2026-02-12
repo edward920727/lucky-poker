@@ -1,7 +1,9 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { TournamentRecord } from '../../types/tournament';
 import { getAllTournaments, deleteTournament, setupRealtimeSyncForTournaments } from '../../utils/storage';
 import { getDateKey, formatTaiwanDate, getTaiwanTodayDateKey, formatTaiwanTime } from '../utils/dateUtils';
+import { getAllDailyReports } from '../../utils/dailyReportStorage';
+import { DailyReport } from '../../types/dailyReport';
 
 interface AllTournamentsViewProps {
   onBack: () => void;
@@ -18,6 +20,14 @@ interface GroupedTournaments {
   totalDeduction: number; // 该日期总提拨金额（如果有记录）
 }
 
+interface ChartDataPoint {
+  date: string;
+  displayDate: string;
+  income: number;
+  expenses: number;
+  netRevenue: number;
+}
+
 export default function AllTournamentsView({ onBack, onViewTournament, onOpenDailyReport }: AllTournamentsViewProps) {
   const [tournaments, setTournaments] = useState<TournamentRecord[]>([]);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
@@ -25,9 +35,22 @@ export default function AllTournamentsView({ onBack, onViewTournament, onOpenDai
   const [endDate, setEndDate] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedRange, setSelectedRange] = useState<string>('全部');
+  const [dailyReports, setDailyReports] = useState<DailyReport[]>([]);
+  const [showChart, setShowChart] = useState<boolean>(false);
+  const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
+
+  const loadDailyReports = useCallback(async () => {
+    try {
+      const reports = await getAllDailyReports();
+      setDailyReports(reports);
+    } catch (error) {
+      console.warn('載入日報表失敗:', error);
+    }
+  }, []);
 
   useEffect(() => {
     loadTournaments();
+    loadDailyReports();
     
     // 設置實時同步（當其他設備更新數據時自動刷新）
     try {
@@ -259,6 +282,50 @@ export default function AllTournamentsView({ onBack, onViewTournament, onOpenDai
     }, { totalBuyInGroups: 0, totalBuyIn: 0, totalTournaments: 0 });
   }, [filteredGroups]);
 
+  // 計算線圖數據（合併日報表和賽事數據）
+  const chartData = useMemo((): ChartDataPoint[] => {
+    // 收集所有日期（從篩選後的賽事分組）
+    const dateMap = new Map<string, ChartDataPoint>();
+
+    // 從篩選後的賽事分組獲取日期和收入數據
+    filteredGroups.forEach(group => {
+      const dateKey = group.date;
+      // 從賽事計算行政費收入
+      const tournamentIncome = group.tournaments.reduce((sum, t) => sum + (t.totalAdministrativeFee || 0), 0);
+      // 活動獎金
+      const activityBonus = group.tournaments.reduce((sum, t) => sum + (t.activityBonus || t.customConfig?.activityBonus || 0), 0);
+
+      dateMap.set(dateKey, {
+        date: dateKey,
+        displayDate: dateKey.slice(5), // MM-DD
+        income: tournamentIncome + activityBonus,
+        expenses: 0,
+        netRevenue: tournamentIncome + activityBonus,
+      });
+    });
+
+    // 用日報表數據覆蓋（日報表有更完整的收入/支出數據）
+    dailyReports.forEach(report => {
+      const dateKey = report.date.split('T')[0];
+      
+      // 只處理在篩選範圍內的日期
+      if (startDate && dateKey < startDate) return;
+      if (endDate && dateKey > endDate) return;
+
+      const existing = dateMap.get(dateKey);
+      dateMap.set(dateKey, {
+        date: dateKey,
+        displayDate: dateKey.slice(5),
+        income: report.totalIncome || existing?.income || 0,
+        expenses: report.totalExpenses || 0,
+        netRevenue: (report.totalIncome || existing?.income || 0) - (report.totalExpenses || 0),
+      });
+    });
+
+    // 按日期排序
+    return Array.from(dateMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+  }, [filteredGroups, dailyReports, startDate, endDate]);
+
   return (
     <div className="min-h-screen text-white relative bg-black">
       {/* 背景装饰 - 黑色筹码带金色发光 */}
@@ -450,6 +517,227 @@ export default function AllTournamentsView({ onBack, onViewTournament, onOpenDai
           </div>
         </div>
 
+        {/* 收支趨勢線圖（可展開/收合） */}
+        {chartData.length > 0 && (
+          <div className="mb-6">
+            <button
+              onClick={() => setShowChart(!showChart)}
+              className="w-full flex items-center justify-between bg-gradient-to-r from-gray-900 via-black to-gray-900 rounded-xl px-5 py-3 border-2 border-poker-gold-500 border-opacity-40 hover:border-opacity-80 transition-all duration-300 shadow-lg"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📈</span>
+                <span className="text-base font-display font-bold text-poker-gold-400">收支趨勢圖</span>
+                <span className="text-xs text-poker-gold-300 bg-poker-gold-900 bg-opacity-50 px-2 py-0.5 rounded-full border border-poker-gold-600">
+                  {chartData.length} 天
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-poker-gold-300">{showChart ? '收起' : '展開'}</span>
+                <svg
+                  className={`w-5 h-5 text-poker-gold-300 transition-transform duration-300 ${showChart ? 'rotate-180' : ''}`}
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </button>
+
+            {showChart && (
+              <div className="mt-2 bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-xl p-4 md:p-6 border-2 border-poker-gold-500 border-opacity-30 shadow-xl">
+                {/* 圖例 */}
+                <div className="flex flex-wrap items-center gap-4 md:gap-6 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-1 rounded bg-green-400"></div>
+                    <span className="text-xs md:text-sm text-green-300 font-medium">收入</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-1 rounded bg-red-400"></div>
+                    <span className="text-xs md:text-sm text-red-300 font-medium">支出</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-1 rounded bg-yellow-400"></div>
+                    <span className="text-xs md:text-sm text-yellow-300 font-medium">總收益</span>
+                  </div>
+                </div>
+
+                {/* SVG 線圖 */}
+                {(() => {
+                  const svgWidth = 800;
+                  const svgHeight = 320;
+                  const pad = { top: 25, right: 25, bottom: 50, left: 65 };
+                  const w = svgWidth - pad.left - pad.right;
+                  const h = svgHeight - pad.top - pad.bottom;
+
+                  const allValues = chartData.flatMap(d => [d.income, d.expenses, d.netRevenue]);
+                  const minVal = Math.min(0, ...allValues);
+                  const maxVal = Math.max(1, ...allValues);
+                  const range = maxVal - minVal || 1;
+                  // 加上 10% padding
+                  const yMin = minVal - range * 0.1;
+                  const yMax = maxVal + range * 0.1;
+                  const yRange = yMax - yMin || 1;
+
+                  const xStep = chartData.length > 1 ? w / (chartData.length - 1) : w / 2;
+
+                  const toX = (i: number) => pad.left + (chartData.length > 1 ? i * xStep : w / 2);
+                  const toY = (val: number) => pad.top + h - ((val - yMin) / yRange) * h;
+
+                  const makePath = (key: 'income' | 'expenses' | 'netRevenue') => {
+                    return chartData.map((d, i) => `${i === 0 ? 'M' : 'L'} ${toX(i).toFixed(1)} ${toY(d[key]).toFixed(1)}`).join(' ');
+                  };
+
+                  // Y 軸刻度（5 個）
+                  const yTicks = Array.from({ length: 5 }, (_, i) => {
+                    const val = yMin + (yRange * i) / 4;
+                    return { val, y: toY(val) };
+                  });
+
+                  // X 軸標籤（根據數據點數量決定顯示間隔）
+                  const labelInterval = chartData.length <= 10 ? 1 : chartData.length <= 20 ? 2 : Math.ceil(chartData.length / 10);
+
+                  // 零線位置
+                  const zeroY = toY(0);
+
+                  return (
+                    <div className="w-full overflow-x-auto">
+                      <svg
+                        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                        className="w-full min-w-[500px]"
+                        style={{ maxHeight: '400px' }}
+                        onMouseLeave={() => setHoveredPoint(null)}
+                      >
+                        {/* 背景網格 */}
+                        {yTicks.map((tick, i) => (
+                          <g key={i}>
+                            <line
+                              x1={pad.left} y1={tick.y}
+                              x2={svgWidth - pad.right} y2={tick.y}
+                              stroke="#374151" strokeWidth={0.5} strokeDasharray="4 4"
+                            />
+                            <text
+                              x={pad.left - 8} y={tick.y + 4}
+                              textAnchor="end" fill="#9ca3af" fontSize="11" fontFamily="monospace"
+                            >
+                              {tick.val >= 1000 ? `${(tick.val / 1000).toFixed(tick.val >= 10000 ? 0 : 1)}k` : Math.round(tick.val).toString()}
+                            </text>
+                          </g>
+                        ))}
+
+                        {/* 零線 */}
+                        {minVal < 0 && (
+                          <line
+                            x1={pad.left} y1={zeroY}
+                            x2={svgWidth - pad.right} y2={zeroY}
+                            stroke="#6b7280" strokeWidth={1}
+                          />
+                        )}
+
+                        {/* X 軸日期標籤 */}
+                        {chartData.map((d, i) => {
+                          if (i % labelInterval !== 0 && i !== chartData.length - 1) return null;
+                          return (
+                            <text
+                              key={i}
+                              x={toX(i)} y={svgHeight - 10}
+                              textAnchor="middle" fill="#9ca3af" fontSize="10" fontFamily="monospace"
+                              transform={`rotate(-30 ${toX(i)} ${svgHeight - 10})`}
+                            >
+                              {d.displayDate}
+                            </text>
+                          );
+                        })}
+
+                        {/* 收入線 (綠色) */}
+                        <path d={makePath('income')} fill="none" stroke="#4ade80" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+                        {/* 支出線 (紅色) */}
+                        <path d={makePath('expenses')} fill="none" stroke="#f87171" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+                        {/* 總收益線 (金色) */}
+                        <path d={makePath('netRevenue')} fill="none" stroke="#fbbf24" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+
+                        {/* 數據點 + 互動區域 */}
+                        {chartData.map((d, i) => (
+                          <g key={i}>
+                            {/* 透明的互動區域 */}
+                            <rect
+                              x={toX(i) - (xStep / 2)}
+                              y={pad.top}
+                              width={xStep}
+                              height={h}
+                              fill="transparent"
+                              onMouseEnter={() => setHoveredPoint(i)}
+                              onTouchStart={() => setHoveredPoint(i)}
+                            />
+
+                            {/* 懸停時顯示垂直線 */}
+                            {hoveredPoint === i && (
+                              <line
+                                x1={toX(i)} y1={pad.top}
+                                x2={toX(i)} y2={pad.top + h}
+                                stroke="#fbbf24" strokeWidth={1} strokeDasharray="3 3" opacity={0.5}
+                              />
+                            )}
+
+                            {/* 收入點 */}
+                            <circle
+                              cx={toX(i)} cy={toY(d.income)}
+                              r={hoveredPoint === i ? 5 : 3}
+                              fill="#4ade80" stroke="#166534" strokeWidth={1.5}
+                              className="transition-all duration-150"
+                            />
+                            {/* 支出點 */}
+                            <circle
+                              cx={toX(i)} cy={toY(d.expenses)}
+                              r={hoveredPoint === i ? 5 : 3}
+                              fill="#f87171" stroke="#991b1b" strokeWidth={1.5}
+                              className="transition-all duration-150"
+                            />
+                            {/* 總收益點 */}
+                            <circle
+                              cx={toX(i)} cy={toY(d.netRevenue)}
+                              r={hoveredPoint === i ? 5 : 3}
+                              fill="#fbbf24" stroke="#92400e" strokeWidth={1.5}
+                              className="transition-all duration-150"
+                            />
+                          </g>
+                        ))}
+                      </svg>
+
+                      {/* 懸停時的數據卡片 */}
+                      {hoveredPoint !== null && chartData[hoveredPoint] && (
+                        <div className="mt-2 bg-gray-800 bg-opacity-90 rounded-lg p-3 border border-poker-gold-600 border-opacity-40">
+                          <div className="text-sm font-bold text-poker-gold-300 mb-2">
+                            📅 {chartData[hoveredPoint].date}
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 text-center">
+                            <div>
+                              <div className="text-xs text-green-300 mb-0.5">收入</div>
+                              <div className="text-sm font-bold text-green-400">
+                                NT$ {chartData[hoveredPoint].income.toLocaleString()}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-red-300 mb-0.5">支出</div>
+                              <div className="text-sm font-bold text-red-400">
+                                NT$ {chartData[hoveredPoint].expenses.toLocaleString()}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-yellow-300 mb-0.5">總收益</div>
+                              <div className={`text-sm font-bold ${chartData[hoveredPoint].netRevenue >= 0 ? 'text-yellow-400' : 'text-red-400'}`}>
+                                {chartData[hoveredPoint].netRevenue >= 0 ? '+' : ''}NT$ {chartData[hoveredPoint].netRevenue.toLocaleString()}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 賽事記錄列表 */}
         <div className="bg-black bg-opacity-80 rounded-3xl p-6 backdrop-blur-md border-2 border-poker-gold-600 border-opacity-50 shadow-2xl shadow-poker-gold-500/20">
           {filteredGroups.length === 0 ? (
@@ -472,9 +760,12 @@ export default function AllTournamentsView({ onBack, onViewTournament, onOpenDai
                     className="bg-gradient-to-r from-gray-900 via-black to-gray-900 rounded-2xl overflow-hidden border-2 border-poker-gold-500 border-opacity-40 shadow-xl shadow-poker-gold-500/20 hover:border-opacity-80 hover:shadow-poker-gold-500/40 transition-all duration-300"
                   >
                     {/* 日期標題（可點擊展開/收合） */}
-                    <button
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => toggleDate(group.date)}
-                      className="w-full p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 hover:bg-gradient-to-r hover:from-gray-900 hover:via-black hover:to-gray-900 transition-all duration-200 text-left relative overflow-hidden group"
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleDate(group.date); } }}
+                      className="w-full p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 hover:bg-gradient-to-r hover:from-gray-900 hover:via-black hover:to-gray-900 transition-all duration-200 text-left relative overflow-hidden group cursor-pointer"
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-poker-gold-500/0 via-poker-gold-500/20 to-poker-gold-500/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                       <div className="flex-1 relative z-10">
@@ -544,7 +835,7 @@ export default function AllTournamentsView({ onBack, onViewTournament, onOpenDai
                           </svg>
                         </div>
                       </div>
-                    </button>
+                    </div>
 
                     {/* 該日期的賽事列表（可展開/收合） */}
                     {isExpanded && (
