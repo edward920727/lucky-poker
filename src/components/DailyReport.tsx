@@ -106,9 +106,12 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
       
       totalAdministrativeFee += adminFee;
 
-      // 统计活动奖金
-      if (tournament.activityBonus && tournament.activityBonus > 0) {
-        const bonusAmount = tournament.activityBonus;
+      // 统计活动奖金（優先使用 tournament.activityBonus，如果沒有則使用 customConfig.activityBonus）
+      const bonusAmount = tournament.activityBonus || 
+        (tournament.tournamentType === 'custom' && tournament.customConfig?.activityBonus) || 
+        0;
+      
+      if (bonusAmount > 0) {
         if (activityBonusMap.has(bonusAmount)) {
           const stats = activityBonusMap.get(bonusAmount)!;
           stats.count += 1;
@@ -274,6 +277,54 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
     };
   }, [report, selectedReportDate, calculateReportFromTournaments]);
 
+
+  // 刷新報表數據（重新從賽事記錄收集）
+  const handleRefresh = useCallback(async () => {
+    if (!report) return;
+    
+    setIsLoading(true);
+    try {
+      // 重新加載所有賽事記錄
+      const allTournaments = getAllTournaments();
+      const dateKey = selectedReportDate.split('T')[0];
+      
+      // 篩選當天的賽事
+      const dayTournaments = allTournaments.filter(t => {
+        const tournamentDate = t.date.split('T')[0];
+        return tournamentDate === dateKey;
+      });
+
+      // 重新計算報表數據（從賽事記錄）
+      const refreshedReport = calculateReportFromTournaments(dayTournaments, dateKey);
+      
+      // 保留現有的支出和現金數據（用戶手動輸入的）
+      // 使用當前輸入框的值（如果用戶已修改但未保存）
+      const currentPrevCash = parseFloat(previousDayCash) || report.previousDayCash || 0;
+      const currentActualCash = parseFloat(actualCash) || report.actualCash || 0;
+      
+      refreshedReport.expenses = report.expenses;
+      refreshedReport.totalExpenses = report.totalExpenses;
+      refreshedReport.previousDayCash = currentPrevCash;
+      refreshedReport.actualCash = currentActualCash;
+      refreshedReport.expectedCash = currentPrevCash + refreshedReport.totalIncome - refreshedReport.totalExpenses;
+      
+      // 保留創建時間，更新修改時間
+      refreshedReport.createdAt = report.createdAt;
+      refreshedReport.updatedAt = new Date().toISOString();
+      
+      setReport(refreshedReport);
+      // 同步更新輸入框的值
+      setPreviousDayCash(currentPrevCash.toString());
+      setActualCash(currentActualCash.toString());
+      
+      alert('報表數據已刷新！');
+    } catch (error) {
+      console.error('刷新報表數據失敗:', error);
+      alert('刷新報表數據失敗，請重試');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [report, selectedReportDate, calculateReportFromTournaments, previousDayCash, actualCash]);
 
   // 保存报表
   const handleSave = async () => {
@@ -502,6 +553,36 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
                 fontSize: '1rem'
               }}
             />
+            <button
+              onClick={handleRefresh}
+              disabled={isLoading}
+              style={{
+                padding: '0.5rem 1.5rem',
+                backgroundColor: isLoading ? '#6b7280' : '#3b82f6',
+                color: '#ffffff',
+                borderRadius: '0.5rem',
+                border: 'none',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                fontWeight: '600',
+                fontSize: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+              title="重新收集當天的賽事數據"
+            >
+              {isLoading ? (
+                <>
+                  <span>🔄</span>
+                  <span>刷新中...</span>
+                </>
+              ) : (
+                <>
+                  <span>🔄</span>
+                  <span>刷新</span>
+                </>
+              )}
+            </button>
             <button
               onClick={handleSave}
               style={{

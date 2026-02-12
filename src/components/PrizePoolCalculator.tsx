@@ -10,9 +10,10 @@ interface PrizePoolCalculatorProps {
   tournamentType?: TournamentType; // 賽事類型
   customConfig?: CustomTournamentConfig | null;
   onCalculationChange?: (result: PrizeCalculationResult | null) => void;
+  onActivityBonusChange?: (activityBonus: number) => void; // 活動獎金變更回調
 }
 
-export default function PrizePoolCalculator({ players, tournamentType, customConfig, onCalculationChange }: PrizePoolCalculatorProps) {
+export default function PrizePoolCalculator({ players, tournamentType, customConfig, onCalculationChange, onActivityBonusChange }: PrizePoolCalculatorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   // 判斷是否為自定義賽事
   const isCustom = tournamentType === 'custom' && customConfig;
@@ -296,11 +297,18 @@ export default function PrizePoolCalculator({ players, tournamentType, customCon
                     const value = e.target.value;
                     if (value === '' || value === null || value === undefined) {
                       setActivityBonus(0);
+                      if (onActivityBonusChange) {
+                        onActivityBonusChange(0);
+                      }
                       return;
                     }
                     const numValue = parseFloat(value);
                     if (!isNaN(numValue)) {
-                      setActivityBonus(Math.max(0, numValue));
+                      const newValue = Math.max(0, numValue);
+                      setActivityBonus(newValue);
+                      if (onActivityBonusChange) {
+                        onActivityBonusChange(newValue);
+                      }
                     }
                   }}
                   onWheel={(e) => {

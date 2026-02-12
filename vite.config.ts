@@ -27,6 +27,11 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
   },
   optimizeDeps: {
-    include: ['firebase'],
+    exclude: ['firebase'],
+  },
+  resolve: {
+    alias: {
+      // 确保 Firebase 正确解析
+    },
   },
 })

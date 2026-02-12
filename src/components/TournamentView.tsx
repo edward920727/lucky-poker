@@ -310,6 +310,10 @@ export default function TournamentView({ tournamentId, onBack }: TournamentViewP
 
     updateTournament(updatedTournament);
     setTournament(updatedTournament);
+    
+    // 觸發報表更新事件
+    window.dispatchEvent(new CustomEvent('tournament-updated'));
+    
     setIsEditMode(false);
     alert('賽事記錄已更新！');
   };

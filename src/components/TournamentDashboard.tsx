@@ -45,6 +45,7 @@ export default function TournamentDashboard({
   const [prizeCalculation, setPrizeCalculation] = useState<PrizeCalculationResult | null>(null);
   const [tournamentNumber, setTournamentNumber] = useState<number | null>(null);
   const [showNumberInput, setShowNumberInput] = useState(false);
+  const [activityBonus, setActivityBonus] = useState<number>(isCustom && customConfig && customConfig.activityBonus ? customConfig.activityBonus : 0);
 
   // 自動計算當天同類型賽事的場次
   useEffect(() => {
@@ -165,13 +166,12 @@ export default function TournamentDashboard({
       : getAdministrativeFee(entryFee);
     const totalAdministrativeFee = administrativeFeePerPerson * totalBuyInGroups;
     
-    // 獲取活動獎金
-    const activityBonus = isCustom && customConfig && customConfig.activityBonus
-      ? customConfig.activityBonus
-      : 0;
+    // 使用狀態中的活動獎金（如果已修改）或從配置中獲取
+    const finalActivityBonus = activityBonus > 0 ? activityBonus : 
+      (isCustom && customConfig && customConfig.activityBonus ? customConfig.activityBonus : 0);
     
     // 財務資訊的總獎池 = (報名費 - 行政費) × 組數 - 活動獎金（不扣提撥）
-    const totalPrizePool = (entryFee - administrativeFeePerPerson) * totalBuyInGroups - activityBonus;
+    const totalPrizePool = (entryFee - administrativeFeePerPerson) * totalBuyInGroups - finalActivityBonus;
     
     // 獲取提撥金（用於保存，但不影響財務資訊的總獎池計算）
     const totalDeduction = isCustom && customConfig && customConfig.totalDeduction
@@ -208,14 +208,24 @@ export default function TournamentDashboard({
       totalAdministrativeFee, // 總行政費
       totalDeduction: totalDeduction > 0 ? totalDeduction : undefined, // 單場總提撥金
       totalPrizePool, // 總獎池（淨獎池）
+      activityBonus: finalActivityBonus > 0 ? finalActivityBonus : undefined, // 活動獎金
       players: [...players], // 深拷贝玩家数据
       expectedTotalChips,
       actualTotalChips,
       startChip: config.startChip,
-      ...(isCustom && customConfig ? { customConfig } : {}),
+      ...(isCustom && customConfig ? { 
+        customConfig: {
+          ...customConfig,
+          activityBonus: finalActivityBonus > 0 ? finalActivityBonus : undefined,
+        }
+      } : {}),
     };
 
     saveTournament(tournamentRecord);
+    
+    // 觸發報表更新事件
+    window.dispatchEvent(new CustomEvent('tournament-updated'));
+    
     alert('賽事記錄已保存！');
     if (onSave) {
       onSave();
@@ -368,7 +378,8 @@ export default function TournamentDashboard({
           players={players} 
           tournamentType={tournamentType}
           customConfig={customConfig}
-          onCalculationChange={setPrizeCalculation} 
+          onCalculationChange={setPrizeCalculation}
+          onActivityBonusChange={setActivityBonus}
         />
 
         {/* 玩家輸入區域 */}

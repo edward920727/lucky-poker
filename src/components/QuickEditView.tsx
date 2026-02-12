@@ -100,6 +100,10 @@ export default function QuickEditView({ tournamentId, onBack }: QuickEditViewPro
       setIsSaving(true);
       updateTournament(updatedTournament);
       setTournament(updatedTournament);
+      
+      // 觸發報表更新事件
+      window.dispatchEvent(new CustomEvent('tournament-updated'));
+      
       setLastSaved(new Date());
       
       // 模擬保存延遲（實際上是同步的，但給用戶反饋）
