@@ -477,22 +477,22 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
   }
   
   return (
-    <div className="min-h-screen bg-black text-white p-4 md:p-6 lg:p-8 w-full relative z-10">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-black text-white p-3 md:p-4 lg:p-3 w-full relative z-10">
+      <div className="max-w-7xl mx-auto">
         {/* 标题栏 */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 md:mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-3 mb-2 md:mb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <button
               onClick={onBack}
-              className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg border-none cursor-pointer text-sm md:text-base transition-colors self-start sm:self-auto"
+              className="bg-gray-700 hover:bg-gray-600 text-white px-2 py-1.5 md:px-3 md:py-1.5 rounded-lg border-none cursor-pointer text-xs md:text-sm transition-colors self-start sm:self-auto"
             >
               ← 返回
             </button>
             <div>
-              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-poker-gold-400 m-0">
+              <h1 className="text-lg md:text-xl lg:text-xl font-bold text-poker-gold-400 m-0">
                 📊 每日報表
               </h1>
-              <p className="text-gray-400 mt-1 text-xs md:text-sm">
+              <p className="text-gray-400 mt-0.5 text-xs">
                 {formatTaiwanDate(selectedReportDate, {
                   year: 'numeric',
                   month: 'long',
@@ -502,19 +502,19 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
               </p>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row gap-1.5 w-full sm:w-auto">
             <input
               type="date"
               id="report-date"
               name="report-date"
               value={selectedReportDate}
               onChange={(e) => setSelectedReportDate(e.target.value)}
-              className="px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm md:text-base flex-1 sm:flex-none"
+              className="px-2 py-1.5 md:px-3 md:py-1.5 bg-gray-800 border border-gray-600 rounded-lg text-white text-xs md:text-sm flex-1 sm:flex-none"
             />
             <button
               onClick={handleRefresh}
               disabled={isLoading}
-              className={`px-3 py-2 md:px-4 md:py-2 rounded-lg border-none cursor-pointer font-semibold text-sm md:text-base flex items-center justify-center gap-2 transition-colors ${
+              className={`px-2 py-1.5 md:px-3 md:py-1.5 rounded-lg border-none cursor-pointer font-semibold text-xs md:text-sm flex items-center justify-center gap-1.5 transition-colors ${
                 isLoading 
                   ? 'bg-gray-600 text-gray-300 cursor-not-allowed' 
                   : 'bg-blue-600 hover:bg-blue-700 text-white'
@@ -536,7 +536,7 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
             </button>
             <button
               onClick={handleSave}
-              className="px-3 py-2 md:px-4 md:py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg border-none cursor-pointer font-semibold text-sm md:text-base transition-colors"
+              className="px-2 py-1.5 md:px-3 md:py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg border-none cursor-pointer font-semibold text-xs md:text-sm transition-colors"
             >
               保存
             </button>
@@ -544,71 +544,79 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
         </div>
 
         {/* 赛事统计 */}
-        <div className="bg-gray-800 rounded-2xl p-4 md:p-6 mb-4 md:mb-6 border-2 border-poker-gold-600 border-opacity-40">
-          <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-poker-gold-400 mb-4">
+        <div className="bg-gray-800 rounded-xl p-2 md:p-3 lg:p-2.5 mb-2 md:mb-3 border-2 border-poker-gold-600 border-opacity-40">
+          <h2 className="text-sm md:text-base lg:text-base font-bold text-poker-gold-400 mb-2">
             🎯 賽事統計
           </h2>
           {displayReport.tournamentStats.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
               {displayReport.tournamentStats.map((stat) => (
                 <div
                   key={stat.type}
-                  className="bg-gray-700 rounded-xl p-3 md:p-4 border border-gray-600"
+                  className="bg-gray-700 rounded-lg p-2 border border-gray-600"
                 >
-                  <div className="text-gray-400 text-xs md:text-sm mb-1 md:mb-2">
+                  <div className="text-gray-400 text-xs mb-0.5">
                     {stat.name}
                   </div>
-                  <div className="text-xl md:text-2xl font-bold text-white">
+                  <div className="text-base md:text-lg font-bold text-white">
                     {stat.groups} 組
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-gray-400 text-center py-6 md:py-8 text-sm md:text-base">
+            <div className="text-gray-400 text-center py-3 text-xs md:text-sm">
               當天沒有賽事記錄
             </div>
           )}
         </div>
 
         {/* 收入统计 */}
-        <div className="bg-gradient-to-br from-green-900 to-green-800 rounded-2xl p-4 md:p-6 mb-4 md:mb-6 border-2 border-green-600 border-opacity-40 shadow-xl">
-          <h2 className="text-xl md:text-2xl font-display font-bold text-green-300 mb-4">
+        <div className="bg-gradient-to-br from-green-900 to-green-800 rounded-xl p-2 md:p-3 lg:p-2.5 mb-2 md:mb-3 border-2 border-green-600 border-opacity-40 shadow-xl">
+          <h2 className="text-sm md:text-base lg:text-base font-display font-bold text-green-300 mb-2">
             💰 收入統計
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
             {/* 行政费 */}
-            <div className="bg-green-800 bg-opacity-50 rounded-xl p-3 md:p-4">
-              <div className="text-green-200 text-xs md:text-sm mb-2">總行政費</div>
-              <div className="text-2xl md:text-3xl font-bold text-white break-words">
+            <div className="bg-green-800 bg-opacity-50 rounded-lg p-2">
+              <div className="text-green-200 text-xs mb-1">總行政費</div>
+              <div className="text-lg md:text-xl font-bold text-white break-words">
                 NT$ {displayReport.totalAdministrativeFee.toLocaleString()}
               </div>
             </div>
 
             {/* 活动奖金 */}
-            <div className="bg-green-800 bg-opacity-50 rounded-xl p-3 md:p-4">
-              <div className="text-green-200 text-xs md:text-sm mb-2">活動獎金總額</div>
-              <div className="text-2xl md:text-3xl font-bold text-white break-words">
+            <div className="bg-green-800 bg-opacity-50 rounded-lg p-2">
+              <div className="text-green-200 text-xs mb-1">活動獎金總額</div>
+              <div className="text-lg md:text-xl font-bold text-white break-words">
                 NT$ {displayReport.totalActivityBonus.toLocaleString()}
+              </div>
+            </div>
+
+            {/* 总收入 */}
+            <div className="bg-green-800 bg-opacity-50 rounded-lg p-2 col-span-2 lg:col-span-2">
+              <div className="text-green-200 text-xs mb-1">總收入</div>
+              <div className="text-xl md:text-2xl font-bold text-white break-words">
+                NT$ {displayReport.totalIncome.toLocaleString()}
               </div>
             </div>
           </div>
 
           {/* 活动奖金明细 */}
           {displayReport.activityBonuses.length > 0 && (
-            <div className="mt-4">
-              <div className="text-green-200 text-xs md:text-sm mb-2">活動獎金明細</div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
+            <div className="mt-2 pt-2 border-t border-green-600">
+              <div className="text-green-200 text-xs mb-1.5">活動獎金明細</div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1.5">
                 {displayReport.activityBonuses.map((bonus) => (
                   <div
                     key={bonus.amount}
-                    className="bg-green-800 bg-opacity-30 rounded-lg p-2 md:p-3 border border-green-600"
+                    className="bg-green-800 bg-opacity-30 rounded-lg p-1.5 border border-green-600"
                   >
-                    <div className="text-green-200 text-xs mb-1">NT$ {bonus.amount}</div>
-                    <div className="text-white font-semibold text-sm md:text-base">
+                    <div className="text-green-200 text-xs mb-0.5">NT$ {bonus.amount}</div>
+                    <div className="text-white font-semibold text-xs">
                       {bonus.count} 次
                     </div>
-                    <div className="text-green-300 text-xs md:text-sm">
+                    <div className="text-green-300 text-xs">
                       小計: NT$ {bonus.total.toLocaleString()}
                     </div>
                   </div>
@@ -616,27 +624,17 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
               </div>
             </div>
           )}
-
-          {/* 总收入 */}
-          <div className="mt-4 pt-4 border-t border-green-600">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-              <div className="text-green-200 text-base md:text-lg font-semibold">總收入</div>
-              <div className="text-3xl md:text-4xl font-bold text-white break-words">
-                NT$ {displayReport.totalIncome.toLocaleString()}
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* 支出统计 */}
-        <div className="bg-gradient-to-br from-red-900 to-red-800 rounded-2xl p-4 md:p-6 mb-4 md:mb-6 border-2 border-red-600 border-opacity-40 shadow-xl">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <h2 className="text-xl md:text-2xl font-display font-bold text-red-300">
+        <div className="bg-gradient-to-br from-red-900 to-red-800 rounded-xl p-2 md:p-3 lg:p-2.5 mb-2 md:mb-3 border-2 border-red-600 border-opacity-40 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+            <h2 className="text-sm md:text-base lg:text-base font-display font-bold text-red-300">
               💸 支出統計
             </h2>
             <button
               onClick={() => setShowExpenseForm(!showExpenseForm)}
-              className="px-3 py-2 md:px-4 md:py-2 bg-red-700 hover:bg-red-600 rounded-lg transition-colors text-xs md:text-sm self-start sm:self-auto"
+              className="px-2 py-1 md:px-2.5 md:py-1 bg-red-700 hover:bg-red-600 rounded-lg transition-colors text-xs self-start sm:self-auto"
             >
               {showExpenseForm ? '取消' : '+ 新增支出'}
             </button>
@@ -644,14 +642,14 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
 
           {/* 新增支出表单 */}
           {showExpenseForm && (
-            <div className="bg-red-800 bg-opacity-50 rounded-xl p-3 md:p-4 mb-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
+            <div className="bg-red-800 bg-opacity-50 rounded-lg p-2 mb-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5">
                 <select
                   id="expense-type"
                   name="expense-type"
                   value={expenseType}
                   onChange={(e) => setExpenseType(e.target.value as ExpenseType)}
-                  className="px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm md:text-base"
+                  className="px-2 py-1.5 bg-gray-800 border border-gray-600 rounded-lg text-white text-xs"
                 >
                   {Object.entries(EXPENSE_TYPE_LABELS).map(([key, label]) => (
                     <option key={key} value={key}>{label}</option>
@@ -664,7 +662,7 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
                   placeholder="金額"
                   value={expenseAmount}
                   onChange={(e) => setExpenseAmount(e.target.value)}
-                  className="px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm md:text-base"
+                  className="px-2 py-1.5 bg-gray-800 border border-gray-600 rounded-lg text-white text-xs"
                 />
                 <input
                   type="text"
@@ -673,11 +671,11 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
                   placeholder="備註（選填）"
                   value={expenseDescription}
                   onChange={(e) => setExpenseDescription(e.target.value)}
-                  className="px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm md:text-base"
+                  className="px-2 py-1.5 bg-gray-800 border border-gray-600 rounded-lg text-white text-xs"
                 />
                 <button
                   onClick={handleAddExpense}
-                  className="px-3 py-2 md:px-4 md:py-2 bg-green-600 hover:bg-green-500 rounded-lg transition-colors text-sm md:text-base"
+                  className="px-2 py-1.5 bg-green-600 hover:bg-green-500 rounded-lg transition-colors text-xs"
                 >
                   添加
                 </button>
@@ -687,24 +685,24 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
 
           {/* 支出列表 */}
           {displayReport.expenses.length > 0 ? (
-            <div className="space-y-2 mb-4">
+            <div className="space-y-1 mb-2 max-h-32 md:max-h-40 overflow-y-auto">
               {displayReport.expenses.map((expense) => (
                 <div
                   key={expense.id}
-                  className="bg-red-800 bg-opacity-50 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+                  className="bg-red-800 bg-opacity-50 rounded-lg p-1.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1"
                 >
-                  <div className="flex flex-wrap items-center gap-2 md:gap-4">
-                    <span className="text-red-200 font-semibold text-sm md:text-base">
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                    <span className="text-red-200 font-semibold">
                       {EXPENSE_TYPE_LABELS[expense.type]}
                     </span>
-                    <span className="text-white text-sm md:text-base">NT$ {expense.amount.toLocaleString()}</span>
+                    <span className="text-white">NT$ {expense.amount.toLocaleString()}</span>
                     {expense.description && (
-                      <span className="text-red-300 text-xs md:text-sm break-words">({expense.description})</span>
+                      <span className="text-red-300 break-words">({expense.description})</span>
                     )}
                   </div>
                   <button
                     onClick={() => handleDeleteExpense(expense.id)}
-                    className="px-3 py-1 bg-red-700 hover:bg-red-600 rounded transition-colors text-xs md:text-sm self-start sm:self-auto"
+                    className="px-2 py-0.5 bg-red-700 hover:bg-red-600 rounded transition-colors text-xs self-start sm:self-auto"
                   >
                     刪除
                   </button>
@@ -712,14 +710,14 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
               ))}
             </div>
           ) : (
-            <div className="text-red-200 text-center py-4 text-sm md:text-base">暫無支出記錄</div>
+            <div className="text-red-200 text-center py-2 text-xs">暫無支出記錄</div>
           )}
 
           {/* 总支出 */}
-          <div className="pt-4 border-t border-red-600">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-              <div className="text-red-200 text-base md:text-lg font-semibold">總支出</div>
-              <div className="text-2xl md:text-3xl font-bold text-white break-words">
+          <div className="pt-2 border-t border-red-600">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
+              <div className="text-red-200 text-xs md:text-sm font-semibold">總支出</div>
+              <div className="text-lg md:text-xl font-bold text-white break-words">
                 NT$ {displayReport.totalExpenses.toLocaleString()}
               </div>
             </div>
@@ -727,50 +725,50 @@ export default function DailyReportView({ onBack, selectedDate }: DailyReportPro
         </div>
 
         {/* 现金管理 */}
-        <div className="bg-gradient-to-br from-blue-900 to-blue-800 rounded-2xl p-4 md:p-6 mb-4 md:mb-6 border-2 border-blue-600 border-opacity-40 shadow-xl">
-          <h2 className="text-xl md:text-2xl font-display font-bold text-blue-300 mb-4">
+        <div className="bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl p-2 md:p-3 lg:p-2.5 mb-2 md:mb-3 border-2 border-blue-600 border-opacity-40 shadow-xl">
+          <h2 className="text-sm md:text-base lg:text-base font-display font-bold text-blue-300 mb-2">
             💵 現金管理
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-            <div className="bg-blue-800 bg-opacity-50 rounded-xl p-3 md:p-4">
-              <div className="text-blue-200 text-xs md:text-sm mb-2">前日櫃檯現金</div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            <div className="bg-blue-800 bg-opacity-50 rounded-lg p-2">
+              <div className="text-blue-200 text-xs mb-1">前日櫃檯現金</div>
               <input
                 type="number"
                 id="previous-day-cash"
                 name="previous-day-cash"
                 value={previousDayCash}
                 onChange={(e) => setPreviousDayCash(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-xl md:text-2xl font-bold"
+                className="w-full px-2 py-1.5 bg-gray-800 border border-gray-600 rounded-lg text-white text-base md:text-lg font-bold"
                 placeholder="0"
               />
             </div>
-            <div className="bg-blue-800 bg-opacity-50 rounded-xl p-3 md:p-4">
-              <div className="text-blue-200 text-xs md:text-sm mb-2">今日應有現金</div>
-              <div className="text-2xl md:text-3xl font-bold text-white break-words">
+            <div className="bg-blue-800 bg-opacity-50 rounded-lg p-2">
+              <div className="text-blue-200 text-xs mb-1">今日應有現金</div>
+              <div className="text-base md:text-lg font-bold text-white break-words">
                 NT$ {expectedCash.toLocaleString()}
               </div>
-              <div className="text-blue-200 text-xs mt-1">
+              <div className="text-blue-200 text-xs mt-0.5">
                 (前日 + 收入 - 支出)
               </div>
             </div>
-            <div className="bg-blue-800 bg-opacity-50 rounded-xl p-3 md:p-4">
-              <div className="text-blue-200 text-xs md:text-sm mb-2">實際現金</div>
+            <div className="bg-blue-800 bg-opacity-50 rounded-lg p-2">
+              <div className="text-blue-200 text-xs mb-1">實際現金</div>
               <input
                 type="number"
                 id="actual-cash"
                 name="actual-cash"
                 value={actualCash}
                 onChange={(e) => setActualCash(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-xl md:text-2xl font-bold"
+                className="w-full px-2 py-1.5 bg-gray-800 border border-gray-600 rounded-lg text-white text-base md:text-lg font-bold"
                 placeholder="0"
               />
             </div>
-            <div className="bg-blue-800 bg-opacity-50 rounded-xl p-3 md:p-4">
-              <div className="text-blue-200 text-xs md:text-sm mb-2">現金差異</div>
-              <div className={`text-2xl md:text-3xl font-bold break-words ${cashDifference >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+            <div className="bg-blue-800 bg-opacity-50 rounded-lg p-2">
+              <div className="text-blue-200 text-xs mb-1">現金差異</div>
+              <div className={`text-base md:text-lg font-bold break-words ${cashDifference >= 0 ? 'text-green-300' : 'text-red-300'}`}>
                 {cashDifference >= 0 ? '+' : ''}NT$ {cashDifference.toLocaleString()}
               </div>
-              <div className="text-blue-200 text-xs mt-1">
+              <div className="text-blue-200 text-xs mt-0.5">
                 (實際 - 應有)
               </div>
             </div>
